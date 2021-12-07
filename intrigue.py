@@ -217,7 +217,7 @@ class Game():
             if player_types[i] == 'random':
                 self.players.append(PlayerRandom(Player_Colour(i)))
             elif player_types[i] == 'human':
-                print("TODO")
+                self.players.append(PlayerHuman(Player_Colour(i)))
             elif player_types[i] == 'honest':
                 self.players.append(PlayerHonest(Player_Colour(i)))
             else:   #Implements a class that does nothing.
@@ -411,12 +411,75 @@ class PlayerHonest(Player):
         return highest_piece
         
     def get_highest_bribe_application(self, applications):
+        """Given a list of applications, chooses the application with the highest bribe."""
         max_application = None
         max = 0
         for piece,square in applications:
             if piece.bribe_history[-1] > max:
                 max_application = (piece,square)
         return max_application
+
+class PlayerHuman(Player):
+    def __init__(self, colour:Player_Colour):
+        Player.__init__(self, colour)
+
+    def play_piece(self, board, players):
+        #Choose player, square and piece.
+        player_i = self.colour.value
+        while player_i == self.colour.value:
+            print("Choose to which player you will send a piece. Type one of the following numerical values:"
+            +"\n0 (Red), 1 (Green), 2 (Blue), 3 (Yellow)\n")
+            player_i = int(input())
+
+        print("Choose which square you want your piece to go to. Type one of the following numerical values:"
+        +"\n0 (1000), 1 (6000), 2 (10000), 3 (3000)\n")
+        square_i = int(input())
+
+        print(self.pieces)
+        print("Choose which piece you will send. Type the index corresponding to the piece:")
+        piece_to_play:Piece = self.pieces.pop(int(input()))
+
+        #Add piece and preferred square (Piece,Square) to application.
+        player:Player = players[player_i]
+        application = (piece_to_play, board[player_i][square_i])
+        player.add_application(application)
+
+        #Bribe is set to random value between min and a fourth of total.
+        print("Select bribe amount. Min",MINIMUM_BRIBE,"Max",self.money)
+        bribe = min(int(input()), self.money)
+        piece_to_play.set_bribe(max(bribe, MINIMUM_BRIBE))
+        
+        #TODO: Adjust current money everytime a bribe is set, so future calculations don't overshoot available amount.
+        #Bribe value is stored in piece.
+        #self.spend_money(piece_to_play.get_bribe())
+
+        #Saves square and piece each time they make a request.
+        self.history_applications.append(application)
+        #print(str(self.history_applications))
+
+    def place_uncontested(self, board, players, application):
+        palace = board[self.colour.value]
+
+        print(palace)
+        print("Choose which square to place the piece",application[0],". It must be unocupied:"
+        +"\n0 (1000), 1 (6000), 2 (10000), 3 (3000)\n")
+        square_i = int(input())
+        while palace[square_i].has_piece():
+            print("\nThat index is occupied. Please select another.")
+            square_i = int(input())
+
+        palace[square_i].piece = application[0]
+    
+    def resolve_external_conflict(self, board, players, external_conflicts):   
+        print(repr(external_conflicts))
+        print("Out of the applicants, choose one. Type the index of the applicant:\n")
+        external_conflicts.pop(int(input()))
+        return external_conflicts
+
+    def resolve_internal_conflict(self, board, players, board_square, piece):
+        print(self.colour.name,": Resolving internal conflict with ",[board_square.piece,piece])
+        print("Out of the two pieces, choose one. Type the index of the piece:\n")        
+        return [board_square.piece,piece][int(input())]
 
 run()
 
