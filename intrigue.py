@@ -2,6 +2,7 @@ from enum import Enum
 from random import choice, randint, random
 import collections
 import numpy as np
+import sys
 
 MINIMUM_BRIBE = 1000
 STARTING_MONEY = 32000
@@ -36,12 +37,10 @@ class Player:
         self.pieces:list[Piece] = generate_initial_pieces()
         self.money = STARTING_MONEY
         self.colour = colour
-        self.palace_applicants = []    #List of pieces that are applying to palace.
+        self.palace_applicants = []     #List of pieces that are applying to palace.
         self.history_applications = []  #List of applications
         #TODO: 
         #Gastar
-        #Jogadores simples -> Aleatorio
-        #
 
     def collect_earnings(self, board):
         """Player sweeps through each square and collects their earnings.
@@ -51,7 +50,6 @@ class Player:
             if Player_Colour(i) != self.colour: #Checks only others' palaces.
                 for j in range(4):
                     square:Square = board[i][j]
-                    #print("Checking "+str(square))
                     if square.has_piece() and square.get_piece().get_player() == self:
                         #square.get_piece().earn_money(square.get_value())
                         self.receive_money(square.get_value())
@@ -72,29 +70,6 @@ class Player:
     def play_piece(self, board, players):
         """Chooses a single piece and sends application to another player's palace, requesting a specific square.
         Piece disappears from hand. Registers which square and piece they sent."""
-
-        #Choose player and square.
-        player_i = randint(0,3)
-        while Player_Colour(player_i) == self.colour:
-            player_i = randint(0,3)
-        square_i = randint(0,3)
-
-        #Select random piece.
-        piece_to_play:Piece = choice(self.pieces)
-        self.pieces.remove(piece_to_play)
-
-        #Add piece and preferred square (Piece,Square) to application.
-        player:Player = players[player_i]
-        application = (piece_to_play, board[player_i][square_i])
-        player.add_application(application)
-
-        #Bribe is set to random value between min and a fourth of total.
-        piece_to_play.set_bribe(randint(MINIMUM_BRIBE, max(round(self.money/4),MINIMUM_BRIBE) ))
-
-        #Saves square and piece each time they make a request.
-        self.history_applications.append(application)
-        #print(str(self.history_applications))
-
     def resolve_applications(self, board, players):
         """Resolves applications, first detecting and resolving external conflicts, then internal conflicts,
         and finally placing the remaining pieces."""
@@ -131,29 +106,10 @@ class Player:
         
     def place_uncontested(self, board, players, application):
         """Resolves an uncontested application, placing the piece in the palace."""
-        #Choose random unocupied square and place piece in it.
-        palace = board[self.colour.value]
-
-        print(self.colour.name,": Placing application ",application,"in palace",palace)
-
-        square_i = randint(0,3)
-        while palace[square_i].piece:
-            square_i = randint(0,3)
-        palace[square_i].piece = application[0]
-        
     def resolve_external_conflict(self, board, players, external_conflicts):
-        """Given list of conflicting pieces, picks one to keep. Returns remainder."""      
-        #Chooses random application.
-        chosen = choice(external_conflicts)
-        external_conflicts.remove(chosen)
-        print(self.colour.name,": For this external conflict I choose ",chosen,"compared to",external_conflicts)
-        return external_conflicts
-
+        """Given list of conflicting pieces, picks one to keep. Returns remainder."""
     def resolve_internal_conflict(self, board, players, board_square, piece):
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
-        #Randomly choose to replace or not.
-        print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
-        return choice([board_square.piece, piece])
 
     def add_application(self, application):
         """Adds a (piece,square) tuple as an application to this player's palace."""
@@ -252,12 +208,20 @@ class Square:
         return "|"+str(self.piece)+"|"
 
 class Game():
-    def __init__(self):
+    def __init__(self, player_types):
         self.boards = []
         self.players = []
         for i in range(4):
             self.boards.append([Square(0),Square(1),Square(2),Square(3)])
-            self.players.append(Player(Player_Colour(i)))
+            print("Creating player of type",player_types[i],"(TODO)")
+            if player_types[i] == 'random':
+                self.players.append(PlayerRandom(Player_Colour(i)))
+            elif player_types[i] == 'human':
+                print("TODO")
+            elif player_types[i] == 'honest':
+                print("TODO")
+            else:   #Implements a class that does nothing.
+                self.players.append(Player(Player_Colour(i)))
         print(self)
         
     def play_game(self):
@@ -301,7 +265,10 @@ class Game():
         return self.__str__()
 
 def run():
-    Game().play_game()
+    player_types = sys.argv
+    player_types.pop(0)
+
+    Game(player_types).play_game()
     print("Running!")
 
 #AUXILIARY FUNCTIONS
@@ -334,6 +301,56 @@ def run():
 #     ps, counts = np.unique(pieces, return_counts=True)
 #     return list(zip(ps, counts))
 
+class PlayerRandom(Player):
+    def __init__(self, colour:Player_Colour):
+        Player.__init__(self, colour)
+
+    def play_piece(self, board, players):
+        #Choose random player and square.
+        player_i = randint(0,3)
+        while Player_Colour(player_i) == self.colour:
+            player_i = randint(0,3)
+        square_i = randint(0,3)
+
+        #Select random piece.
+        piece_to_play:Piece = choice(self.pieces)
+        self.pieces.remove(piece_to_play)
+
+        #Add piece and preferred square (Piece,Square) to application.
+        player:Player = players[player_i]
+        application = (piece_to_play, board[player_i][square_i])
+        player.add_application(application)
+
+        #Bribe is set to random value between min and a fourth of total.
+        piece_to_play.set_bribe(randint(MINIMUM_BRIBE, max(round(self.money/4),MINIMUM_BRIBE) ))
+
+        #Saves square and piece each time they make a request.
+        self.history_applications.append(application)
+        #print(str(self.history_applications))
+
+    def place_uncontested(self, board, players, application):
+        #Choose random unocupied square and place piece in it.
+        palace = board[self.colour.value]
+
+        print(self.colour.name,": Placing application ",application,"in palace",palace)
+
+        square_i = randint(0,3)
+        while palace[square_i].piece:
+            square_i = randint(0,3)
+        palace[square_i].piece = application[0]
+    
+    def resolve_external_conflict(self, board, players, external_conflicts):   
+        #Chooses random application.
+        chosen = choice(external_conflicts)
+        external_conflicts.remove(chosen)
+        print(self.colour.name,": For this external conflict I choose ",chosen,"compared to",external_conflicts)
+        return external_conflicts
+
+    def resolve_internal_conflict(self, board, players, board_square, piece):
+        #Randomly choose to replace or not.
+        print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
+        return choice([board_square.piece, piece])
+        
 
 run()
 
