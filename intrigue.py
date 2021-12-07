@@ -1,7 +1,5 @@
 from enum import Enum
 from random import choice, randint, random
-import collections
-import numpy as np
 import sys
 
 MINIMUM_BRIBE = 1000
@@ -19,7 +17,9 @@ class Player_Colour(Enum):
     YELLOW = 3
 
 class Player:
-    """This class should hold only the information that's unique to it, and receive all other information it needs from Game."""
+    """This class should hold only the information that's unique to it, and receive all other information it needs from Game.
+    \nTo create new behaviours, extend this class and implement play_piece, place_uncontested, resolve_external_conflict, and
+    resolve_internal_conflict."""
     
     def __init__(self, colour:Player_Colour):
         """Creates a new player with their colour, money, pieces and palace."""
@@ -39,8 +39,6 @@ class Player:
         self.colour = colour
         self.palace_applicants = []     #List of pieces that are applying to palace.
         self.history_applications = []  #List of applications
-        #TODO: 
-        #Gastar
 
     def collect_earnings(self, board):
         """Player sweeps through each square and collects their earnings.
@@ -75,6 +73,8 @@ class Player:
         and finally placing the remaining pieces."""
         palace = board[self.colour.value]
 
+        print("Before external:",self.applicants_string())
+
         #Check external conflicts. 
         for type in range(100,104):
             external_conflicts = []
@@ -86,6 +86,8 @@ class Player:
                 external_conflicts = self.resolve_external_conflict(board, players, external_conflicts)
                 #Remove current conflict from applications.
                 self.palace_applicants = [a for a in self.palace_applicants if a not in external_conflicts]
+        
+        print("After external:",self.applicants_string())
 
         #Check internal conflicts.        
         for board_square in palace:
@@ -98,6 +100,8 @@ class Player:
                     #Resolve internal conflict for single conflict:
                     board_square.piece = self.resolve_internal_conflict(board, players, board_square, piece)
                     self.palace_applicants.remove( (piece,square) )
+
+        print("After internal:",self.applicants_string())
 
         #Place remainder.
         for application in self.palace_applicants:
@@ -115,6 +119,12 @@ class Player:
         """Adds a (piece,square) tuple as an application to this player's palace."""
         self.palace_applicants.append(application)
 
+    def applicants_string(self) -> str:
+        """Returns a string representing the applicants."""
+        string = ""
+        for piece,square in self.palace_applicants:
+            string += str(piece)+"; "
+        return string
     def __eq__(self, other):
         if isinstance(other, Player):
             return self.colour == other.colour
@@ -236,30 +246,31 @@ class Game():
             play_piece() * 2\n
             EXTRA: Update bribes (Ideally this would be done when each player is negotiating, not all at once at the end of a turn.)
         """
-        counter = 0
-        while counter < 4:
-            print("\n############# ROUND ",counter+1," #############\n")
+        counter = 1
+        while counter <= 6:
+            print("\n############# ROUND ",counter," #############\n")
             for p in self.players:
                 p:Player
+                print("\n###",p.colour.name,"TURN ###\n")
                 p.collect_earnings(self.boards)  
                 p.resolve_applications(self.boards, self.players)
-                p.play_piece(self.boards, self.players)
-                p.play_piece(self.boards, self.players)
+                if counter > 4:
+                    p.play_piece(self.boards, self.players)
+                    p.play_piece(self.boards, self.players)
                 print(self)
             counter += 1
-        
-        for p in self.players:
-            p:Player
-            p.collect_earnings(self.boards)  
-            print(self)
 
     def __str__(self):
-        board_rep = ""
+        board_rep = "________________________________________________________________________"
         for row in range(len(self.boards)):
-            board_rep += "\n"+str(self.boards[row])+Player_Colour(row).name
+            board_rep += "\n"+str(self.boards[row])+Player_Colour(row).name+" \nApplicants: "
+            for piece, square in self.players[row].palace_applicants:
+                board_rep += repr(piece)+" "+str(piece.bribe)+"; "
+            board_rep +="\n"
         board_rep += "\n"
         for p in self.players:
             board_rep += str(p)
+        board_rep += "\n________________________________________________________________________"
         return board_rep
     def __repr__(self):
         return self.__str__()
@@ -271,35 +282,7 @@ def run():
     Game(player_types).play_game()
     print("Running!")
 
-#AUXILIARY FUNCTIONS
-# def get_requests(palace):
-#         """Given a palace (row of squares), returns a list of all pieces requesting a position."""
-#         all_palace_requests = []
-#         for square in palace:
-#             square:Square
-#             all_palace_requests += square.get_requested()     
-#         return all_palace_requests   
-        
-# def get_conflicting(pieces):
-#     """Given a set of pieces, returns a list of all conflicting pieces."""
-#     result = []
-#     #For each piece in the list, appends it to result if it repeats.
-#     for p in pieces:
-#         if p in [piece for piece, count in get_piece_counts(pieces) if count > 1]:
-#             result.append(p)
-#     return result
-# def get_uncontested(pieces):
-#     """Given a set of pieces, returns a list of all uncontested pieces."""
-#     if pieces == []:
-#         return []
-#     #print("Palace: \n"+str(pieces))
-#     #print(get_piece_counts(pieces))
-#     return [piece for piece, count in get_piece_counts(pieces) if count == 1]
-
-# def get_piece_counts(pieces):
-#     """Given a list of pieces, returns a list of tuples (piece, count)"""
-#     ps, counts = np.unique(pieces, return_counts=True)
-#     return list(zip(ps, counts))
+############################################### Player Classes ###############################################
 
 class PlayerRandom(Player):
     def __init__(self, colour:Player_Colour):
@@ -371,6 +354,7 @@ class PlayerHonest(Player):
         square:Square = board[player_i][square_i]
         application = (piece_to_play, square)
         player.add_application(application)
+        #TODO: Add action indicators for each action.
 
         #Bribe is set to the value of the square, or the as high as possible otherwise.
         piece_to_play.set_bribe(min(square.get_value(), self.money) )
