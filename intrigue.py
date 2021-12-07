@@ -107,7 +107,7 @@ class Player:
     def place_uncontested(self, board, players, application):
         """Resolves an uncontested application, placing the piece in the palace."""
     def resolve_external_conflict(self, board, players, external_conflicts):
-        """Given list of conflicting pieces, picks one to keep. Returns remainder."""
+        """Given list of conflicting applications, picks one to keep. Returns remainder."""
     def resolve_internal_conflict(self, board, players, board_square, piece):
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
 
@@ -131,7 +131,7 @@ class Piece:
         self.type:Piece_Type = type     #Type of piece
         #self.money_earned:int = 0      #Money accumulated by this piece.
         self.bribe:int = MINIMUM_BRIBE  #How much the owner will pay to get the piece where it is requesting.
-        self.request:Square = None      #Square that piece is requesting.
+        self.bribe_history = []
     
     #def earn_money(self, money: int):
         #"""Increases amount of money this piece has earned."""
@@ -142,9 +142,9 @@ class Piece:
     def collect_bribe(self) -> int:
         """The caller collects the bribe from this piece, setting it to minimum and removing the money from the piece's owner."""
         self.owner.spend_money(self.bribe) #Owner pays
-        money_to_pay = self.bribe
+        self.bribe_history.append(self.bribe)
         self.bribe = MINIMUM_BRIBE
-        return money_to_pay
+        return self.bribe_history[-1]
         
     def set_bribe(self, money:int):
         """Owner sets bribe to amount money."""
@@ -219,7 +219,7 @@ class Game():
             elif player_types[i] == 'human':
                 print("TODO")
             elif player_types[i] == 'honest':
-                print("TODO")
+                self.players.append(PlayerHonest(Player_Colour(i)))
             else:   #Implements a class that does nothing.
                 self.players.append(Player(Player_Colour(i)))
         print(self)
@@ -350,7 +350,73 @@ class PlayerRandom(Player):
         #Randomly choose to replace or not.
         print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
         return choice([board_square.piece, piece])
+
+class PlayerHonest(Player):
+    def __init__(self, colour:Player_Colour):
+        Player.__init__(self, colour)
+
+    def play_piece(self, board, players):
+        #Choose random player and square.
+        player_i = randint(0,3)
+        while Player_Colour(player_i) == self.colour:
+            player_i = randint(0,3)
+        square_i = randint(0,3)
+
+        #Select random piece.
+        piece_to_play:Piece = choice(self.pieces)
+        self.pieces.remove(piece_to_play)
+
+        #Add piece and preferred square (Piece,Square) to application.
+        player:Player = players[player_i]
+        square:Square = board[player_i][square_i]
+        application = (piece_to_play, square)
+        player.add_application(application)
+
+        #Bribe is set to the value of the square, or the as high as possible otherwise.
+        piece_to_play.set_bribe(min(square.get_value(), self.money) )
+
+        #Saves square and piece each time they make a request.
+        self.history_applications.append(application)
+        #print(str(self.history_applications))
+
+    def place_uncontested(self, board, players, application):
+        #Attempts to place the piece in the requested square, else random.
+        palace = board[self.colour.value]
+        piece:Piece = application[0]
+        square:Square = application[1]
+
+        print(self.colour.name,": Placing application ",application,"in palace",palace)
+
+        if not square.has_piece():
+            square.set_piece(piece)
+        else:
+            #Set the piece at a random spot.
+            square_i = randint(0,3)
+            while palace[square_i].piece:
+                square_i = randint(0,3)
+            palace[square_i].piece = piece
+    
+    def resolve_external_conflict(self, board, players, external_conflicts):   
+        #Chooses highest bribing piece.
+        max_application = self.get_highest_bribe_application(external_conflicts)
         
+        external_conflicts.remove(max_application)
+        print(self.colour.name,": For this external conflict I choose ",max_application,"compared to",external_conflicts)
+        return external_conflicts
+
+    def resolve_internal_conflict(self, board, players, board_square, piece):
+        #Chooses highest bribing piece.
+        highest_piece, square = self.get_highest_bribe_application([(board_square.piece,board_square),(piece,board_square)])
+        print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
+        return highest_piece
+        
+    def get_highest_bribe_application(self, applications):
+        max_application = None
+        max = 0
+        for piece,square in applications:
+            if piece.bribe_history[-1] > max:
+                max_application = (piece,square)
+        return max_application
 
 run()
 
