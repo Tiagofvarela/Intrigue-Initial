@@ -1,11 +1,14 @@
 from piece import Piece
 
 class Square:
-    
-    def __init__(self, index):
+    """Represents a square in a player board, having an inherent value and a piece."""
+    value:int
+    piece:Piece
+
+    def __init__(self, index:int):
         """Creates a square of a given index (of the four available)."""    
         def get_value_from_index(i) -> int:
-            """Given a square index, returns its value."""
+            """Given an index for a Square, returns its value."""
             if i == 0:
                 return 1000
             elif i == 1:
@@ -15,7 +18,7 @@ class Square:
             else:
                 return 3000        
         self.value = get_value_from_index(index)
-        self.piece:Piece = None         #Piece in this square.
+        self.piece = None
 
     def has_piece(self) -> bool:
         return self.piece != None

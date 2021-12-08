@@ -1,25 +1,30 @@
 from intrigue_datatypes import Player_Colour, MINIMUM_BRIBE
-from player import Player
+from player import Application, Gameboard, Player
 from piece import Piece
 from square import Square
 from random import choice, randint
 import sys
 
 class Game():
-    def __init__(self, player_types):
+    def __init__(self, player_types:list[str]):
         self.boards = []
         self.players = []
-        for i in range(4):
-            self.boards.append([Square(0),Square(1),Square(2),Square(3)])
-            print("Creating player of type",player_types[i],"(TODO)")
-            if player_types[i] == 'random':
-                self.players.append(PlayerRandom(Player_Colour(i)))
-            elif player_types[i] == 'human':
-                self.players.append(PlayerHuman(Player_Colour(i)))
-            elif player_types[i] == 'honest':
-                self.players.append(PlayerHonest(Player_Colour(i)))
-            else:   #Implements a class that does nothing.
-                self.players.append(Player(Player_Colour(i)))
+        try:
+            for i in range(4):
+                self.boards.append([Square(0),Square(1),Square(2),Square(3)])
+                print("Creating player of type",player_types[i])
+                if player_types[i] == 'random':
+                    self.players.append(PlayerRandom(Player_Colour(i)))
+                elif player_types[i] == 'human':
+                    self.players.append(PlayerHuman(Player_Colour(i)))
+                elif player_types[i] == 'honest':
+                    self.players.append(PlayerHonest(Player_Colour(i)))
+                else:
+                    raise Exception(player_types[i]+" is an invalid player type.")
+        except Exception as e:
+            print("\nError:",e.args[0])
+            print("Please indicate four player types by writing four type names separated by spaces.")
+            exit()
         print(self)
         
     def play_game(self):
@@ -60,6 +65,7 @@ class Game():
             board_rep += str(p)
         board_rep += "\n________________________________________________________________________"
         return board_rep
+        
     def __repr__(self):
         return self.__str__()
 
@@ -76,7 +82,7 @@ class PlayerRandom(Player):
     def __init__(self, colour:Player_Colour):
         Player.__init__(self, colour)
 
-    def play_piece(self, board, players):
+    def play_piece(self, board:Gameboard, players:list[Player]):
         #Choose random player and square.
         player_i = randint(0,3)
         while Player_Colour(player_i) == self.colour:
@@ -99,25 +105,25 @@ class PlayerRandom(Player):
         self.history_applications.append(application)
         #print(str(self.history_applications))
 
-    def place_uncontested(self, board, players, application):
+    def place_uncontested(self, board:Gameboard, players:list[Player], application:Application):
         #Choose random unocupied square and place piece in it.
         palace = board[self.colour.value]
 
         print(self.colour.name,": Placing application ",application,"in palace",palace)
 
         square_i = randint(0,3)
-        while palace[square_i].piece:
+        while palace[square_i].has_piece():
             square_i = randint(0,3)
-        palace[square_i].piece = application[0]
+        palace[square_i].set_piece(application[0])
     
-    def resolve_external_conflict(self, board, players, external_conflicts):   
+    def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]):  
         #Chooses random application.
         chosen = choice(external_conflicts)
         external_conflicts.remove(chosen)
         print(self.colour.name,": For this external conflict I choose ",chosen,"compared to",external_conflicts)
         return external_conflicts
 
-    def resolve_internal_conflict(self, board, players, board_square, piece):
+    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, piece:Piece):
         #Randomly choose to replace or not.
         print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
         return choice([board_square.piece, piece])
@@ -126,7 +132,7 @@ class PlayerHonest(Player):
     def __init__(self, colour:Player_Colour):
         Player.__init__(self, colour)
 
-    def play_piece(self, board, players):
+    def play_piece(self, board:Gameboard, players:list[Player]):
         #Choose random player and square.
         player_i = randint(0,3)
         while Player_Colour(player_i) == self.colour:
@@ -151,7 +157,7 @@ class PlayerHonest(Player):
         self.history_applications.append(application)
         #print(str(self.history_applications))
 
-    def place_uncontested(self, board, players, application):
+    def place_uncontested(self, board:Gameboard, players:list[Player], application:Application):
         #Attempts to place the piece in the requested square, else random.
         palace = board[self.colour.value]
         piece:Piece = application[0]
@@ -168,7 +174,7 @@ class PlayerHonest(Player):
                 square_i = randint(0,3)
             palace[square_i].piece = piece
     
-    def resolve_external_conflict(self, board, players, external_conflicts):   
+    def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]):
         #Chooses highest bribing piece.
         max_application = self.get_highest_bribe_application(external_conflicts)
         
@@ -176,7 +182,7 @@ class PlayerHonest(Player):
         print(self.colour.name,": For this external conflict I choose ",max_application,"compared to",external_conflicts)
         return external_conflicts
 
-    def resolve_internal_conflict(self, board, players, board_square, piece):
+    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, piece:Piece):
         #Chooses highest bribing piece.
         highest_piece, square = self.get_highest_bribe_application([(board_square.piece,board_square),(piece,board_square)])
         print(self.colour.name,": Resolving internal conflict with ",board_square.piece,"versus",piece)
@@ -195,7 +201,7 @@ class PlayerHuman(Player):
     def __init__(self, colour:Player_Colour):
         Player.__init__(self, colour)
 
-    def play_piece(self, board, players):
+    def play_piece(self, board:Gameboard, players:list[Player]):
         #Choose player, square and piece.
         player_i = self.colour.value
         while player_i == self.colour.value:
@@ -229,7 +235,7 @@ class PlayerHuman(Player):
         self.history_applications.append(application)
         #print(str(self.history_applications))
 
-    def place_uncontested(self, board, players, application):
+    def place_uncontested(self, board:Gameboard, players:list[Player], application:Application):
         palace = board[self.colour.value]
 
         print(palace)
@@ -242,13 +248,13 @@ class PlayerHuman(Player):
 
         palace[square_i].piece = application[0]
     
-    def resolve_external_conflict(self, board, players, external_conflicts):   
+    def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]):
         print(repr(external_conflicts))
         print("Out of the applicants, choose one. Type the index of the applicant:\n")
         external_conflicts.pop(int(input()))
         return external_conflicts
 
-    def resolve_internal_conflict(self, board, players, board_square, piece):
+    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, piece:Piece):
         print(self.colour.name,": Resolving internal conflict with ",[board_square.piece,piece])
         print("Out of the two pieces, choose one. Type the index of the piece:\n")        
         return [board_square.piece,piece][int(input())]
