@@ -40,37 +40,31 @@ class Player(metaclass=abc.ABCMeta):
     def collect_earnings(self, board:Gameboard):
         """Player sweeps through each square and collects their earnings.
         Earnings include salaries and bribes from applicants."""
-        #Collect salaries.
+        print("\n# Collect Salaries #\n")
         for i in range(len(board)):
             if Player_Colour(i) != self.colour: #Checks only others' palaces.
                 for j in range(4):
                     square = board[i][j]
-                    if square.has_piece() and square.get_piece().get_player() == self:
+                    if square.piece and square.piece.owner == self:
                         #square.get_piece().earn_money(square.get_value())
-                        self.receive_money(square.get_value())
+                        self.money += square.value
+                        print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+Player_Colour(i).name+"'s palace.")
 
-        #Collect bribes.
+        print("\n# Collect Bribes #\n")
         for piece, square in self.palace_applicants:
-            piece.collect_bribe()
-    
-    def receive_money(self, money:int):
-        """Increases current money by given money."""
-        self.money += money
-    def spend_money(self, money:int):
-        """Player spends money amount of their money."""
-        self.money -= money
+            print(self.colour.name+" collected "+str(piece.collect_bribe())+" bribe from "+piece.owner.colour.name+" to place "+str(piece)+" in "+str(square))            
     
     ###TO IMPLEMENT###
     @abc.abstractmethod
-    def play_piece(self, board:Gameboard, players:list[Player]):
-        """Chooses a single piece and sends application to another player's palace, requesting a specific square.
-        Piece disappears from hand. Registers which square and piece they sent."""  
+    def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
+        """Chooses a piece to send and a player to send it to. Sets bribe on the piece. Returns Application and Player to send it to.
+        \nRegisters which square and piece they have sent sent."""  
     @abc.abstractmethod      
-    def place_uncontested(self, board:Gameboard, players:list[Player], application:Application):
+    def select_square_to_place(self, board:Gameboard, players:list[Player], application:Application) -> Square:
         """Resolves an uncontested application, placing the piece in the palace."""
     @abc.abstractmethod
-    def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]) -> list[Application]:
-        """Given list of conflicting applications, picks one to keep. Returns remainder."""
+    def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]) -> Application:
+        """Given list of conflicting applications, picks one to keep and returns it."""
     @abc.abstractmethod
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, piece:Piece) -> Piece:
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
@@ -79,9 +73,10 @@ class Player(metaclass=abc.ABCMeta):
     def resolve_applications(self, board:Gameboard, players:list[Player]):
         """Resolves applications, first detecting and resolving external conflicts, then internal conflicts,
         and finally placing the remaining pieces."""
+        print("\n# Resolve Conflicts #\n")
+        print(self.colour.name+" applications:"+str(self.palace_applicants))
+        
         palace = board[self.colour.value]
-
-        print("Before external:",self.applicants_string())
 
         #Check external conflicts. 
         for type in range(100,104):
@@ -89,33 +84,34 @@ class Player(metaclass=abc.ABCMeta):
             for application in self.palace_applicants:
                 if Piece_Type(type) == application[0].type:
                     external_conflicts.append(application)
-            if len(external_conflicts) > 1:
-                #Resolve external conflict for single conflict:
-                external_conflicts = self.resolve_external_conflict(board, players, external_conflicts)
-                #Remove current conflict from applications.
-                self.palace_applicants = [a for a in self.palace_applicants if a not in external_conflicts]
-        
-        print("After external:",self.applicants_string())
 
-        #Check internal conflicts.        
+            #Picks an application to keep if there are several conflicting ones.
+            if len(external_conflicts) > 1:
+                chosen_application = self.resolve_external_conflict(board, players, external_conflicts)
+                external_conflicts.remove(chosen_application)
+                self.palace_applicants = [a for a in self.palace_applicants if a not in external_conflicts]
+                print(self.colour.name+" discarded "+str(external_conflicts))
+
+        #Check internal conflicts.
         for board_square in palace:
-            if board_square.has_piece():
+            if board_square.piece:
                 for piece, square in self.palace_applicants.copy():
-                    if board_square.get_piece().type == piece.type:
-                        #Resolve internal conflict for single conflict:
-                        board_square.piece = self.resolve_internal_conflict(board, players, board_square, piece)
+                    #Chooses which of the two pieces to keep.
+                    if board_square.piece.type == piece.type:
+                        chosen_piece = self.resolve_internal_conflict(board, players, board_square, piece)
+                        print(self.colour.name+" chose "+str(chosen_piece)+" out of "+str(board_square.piece)+" and "+str(piece))
+                        board_square.piece = chosen_piece                    
                         self.palace_applicants.remove( (piece,square) )
 
-        print("After internal:",self.applicants_string())
-
         #Place remainder.
-        for application in self.palace_applicants:
-            self.place_uncontested(board, players, application)
+        for application in self.palace_applicants.copy():
+            square = self.select_square_to_place(board, players, application)
+            print(self.colour.name+" took "+str(application)+" request and placed piece at "+str(square)+" in palace",palace)
+            square.piece = application[0]
             self.palace_applicants.remove( application )
-
-    def add_application(self, application:Application):
-        """Adds a (piece,square) tuple as an application to this player's palace."""
-        self.palace_applicants.append(application)
+        
+        if len(self.palace_applicants) > 0:
+            raise(Exception("Not all applications were handled."))
 
     def applicants_string(self) -> str:
         """Returns a string representing the applicants."""

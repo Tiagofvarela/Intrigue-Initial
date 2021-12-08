@@ -19,18 +19,6 @@ class Square:
                 return 3000        
         self.value = get_value_from_index(index)
         self.piece = None
-
-    def has_piece(self) -> bool:
-        return self.piece != None
-    def get_piece(self) -> Piece:
-        """Returns the piece in this square."""
-        return self.piece
-    def get_value(self) -> int:
-        """Returns this square's value."""
-        return self.value
-    def set_piece(self, piece:Piece):
-        """Sets a piece to this square."""
-        self.piece = piece
     
     def __str__(self):
         return "|"+str(self.piece)+" Value: "+str(self.value)+"|"
