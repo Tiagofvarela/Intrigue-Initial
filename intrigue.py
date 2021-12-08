@@ -42,7 +42,7 @@ class Game():
                 print("\n###",p.colour.name,"TURN ###\n")
                 p.collect_earnings(self.boards)  
                 p.resolve_applications(self.boards, self.players)
-                if counter > 4:
+                if counter <= 4:
                     p.play_piece(self.boards, self.players)
                     p.play_piece(self.boards, self.players)
                 print(self)
