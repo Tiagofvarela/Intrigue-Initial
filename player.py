@@ -50,29 +50,31 @@ class Player(metaclass=abc.ABCMeta):
                         self.money += square.value
                         print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+Player_Colour(i).name+"'s palace.")
 
-        print("\n# Collect Bribes #\n")
-        for piece, square in self.palace_applicants:
-            print(self.colour.name+" collected "+str(piece.collect_bribe())+" bribe from "+piece.owner.colour.name+" to place "+str(piece)+" in "+str(square))            
-    
     ###TO IMPLEMENT###
     @abc.abstractmethod
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
-        """Chooses a piece to send and a player to send it to. Sets bribe on the piece. Returns Application and Player to send it to.
+        """Chooses a piece to send and a player to send it to. Returns Application and Player to send it to.
         \nRegisters which square and piece they have sent sent."""  
     @abc.abstractmethod      
     def select_square_to_place(self, board:Gameboard, players:list[Player], application:Application) -> Square:
         """Resolves an uncontested application, placing the piece in the palace."""
     @abc.abstractmethod
     def resolve_external_conflict(self, board:Gameboard, players:list[Player], external_conflicts:list[Application]) -> Application:
-        """Given list of conflicting applications, picks one to keep and returns it."""
+        """Given list of conflicting applications, picks one to keep and returns it. 
+        \nBribes are collected during this resolution."""
     @abc.abstractmethod
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, piece:Piece) -> Piece:
-        """Given the conflicting square and piece, chooses a piece to keep and returns it."""
+        """Given the conflicting square and piece, chooses a piece to keep and returns it. 
+        \nBribes are collected during this resolution."""
+    @abc.abstractmethod
+    def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
+        """Decide bribe to give to player so they accept the application. 
+        \nAmount is subtracted from account."""
     ###################
 
     def resolve_applications(self, board:Gameboard, players:list[Player]):
         """Resolves applications, first detecting and resolving external conflicts, then internal conflicts,
-        and finally placing the remaining pieces."""
+        and finally placing the remaining pieces. \nBribes are collected during this phase."""
         print("\n# Resolve Conflicts #\n")
         print(self.colour.name+" applications:"+str(self.palace_applicants))
         
@@ -86,7 +88,7 @@ class Player(metaclass=abc.ABCMeta):
                     external_conflicts.append(application)
 
             #Picks an application to keep if there are several conflicting ones.
-            if len(external_conflicts) > 1:
+            if len(external_conflicts) > 1:    
                 chosen_application = self.resolve_external_conflict(board, players, external_conflicts)
                 external_conflicts.remove(chosen_application)
                 self.palace_applicants = [a for a in self.palace_applicants if a not in external_conflicts]
@@ -105,6 +107,7 @@ class Player(metaclass=abc.ABCMeta):
 
         #Place remainder.
         for application in self.palace_applicants.copy():
+            self.log_bribe(application[0].owner.decide_bribe(application,self,{}),application)
             square = self.select_square_to_place(board, players, application)
             print(self.colour.name+" took "+str(application)+" request and placed piece at "+str(square)+" in palace",palace)
             square.piece = application[0]
@@ -112,6 +115,11 @@ class Player(metaclass=abc.ABCMeta):
         
         if len(self.palace_applicants) > 0:
             raise(Exception("Not all applications were handled."))
+
+    def log_bribe(self, bribe:int, application:Application) -> int:
+        """Registers the bribe as having been received, increasing own money."""
+        self.money += bribe
+        print(application[0].owner.colour.name+" has paid "+str(bribe)+" for "+str(application))
 
     def applicants_string(self) -> str:
         """Returns a string representing the applicants."""
@@ -123,6 +131,8 @@ class Player(metaclass=abc.ABCMeta):
         if isinstance(other, Player):
             return self.colour == other.colour
     
+    def __hash__(self) -> int:
+        return hash(self.colour)
     def __str__(self):
         return "\n"+str(self.colour.name)+" Pieces: "+str(self.pieces)+" Money: "+str(self.money)
     def __repr__(self):
