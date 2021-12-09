@@ -21,6 +21,6 @@ class Square:
         self.piece = None
     
     def __str__(self):
-        return "|"+str(self.piece)+" Value: "+str(self.value)+"|"
-    def __repr__(self):
         return "|"+str(self.piece)+"|"
+    def __repr__(self):
+        return "|"+str(self.piece)+" Value: "+str(self.value)+"|"
