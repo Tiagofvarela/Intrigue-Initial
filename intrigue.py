@@ -74,6 +74,8 @@ class Game():
                     player_send_piece(p)
                     player_send_piece(p)
                 print(self)
+                print("\n###",p.colour.name,"TURN  End###\nPress enter to continue.")
+                input()
             counter += 1
 
     def __str__(self):
@@ -88,7 +90,7 @@ class Game():
         for row in range(len(self.boards)):
             board_rep += "\n"+line_str(self.boards[row])+Player_Colour(row).name+" \nApplicants: "
             for piece, square in self.players[row].palace_applicants:
-                board_rep += repr(piece)#+" "+str(piece.bribe)+"; "
+                board_rep += repr(piece)+" "#+str(piece.bribe)+"; "
             board_rep +="\n"
         board_rep += "\n"
         for p in self.players:
@@ -179,7 +181,7 @@ class PlayerHonest(Player):
                     raise Exception("Could not find a Square to send Piece to.")   #Stop execution if unexpected behaviour occurs.
             return most_valuable_squares
 
-        def choose_player(squares:list[Square]) -> Square: 
+        def choose_player_square(squares:list[Square]) -> Square: 
             """Given the potential squares, chooses the square from the preferred player."""           
             #Choose a square from a Player who has accepted an application last time.
             chosen_square:Square
@@ -227,7 +229,7 @@ class PlayerHonest(Player):
             print(self.get_max_value_available_squares(board))
             raise Exception("The Square is empty, yet a non-conflicting piece couldn't be found.")
 
-        square = choose_player(choose_squares())
+        square = choose_player_square(choose_squares())
         player = square.owner
         piece = choose_piece(square)
 

@@ -89,6 +89,7 @@ To create a new Player Type, Player must be extended, and the above functions mu
 : An honest player who always acts fairly, accepting the Pieces with the highest bribe and sending Applications for the highest paying jobs. The attempt to bribe fairly for each position, aiming to be the highest paying briber.
 
 ## TODO
+- General debugging for each Behaviour.
 - Log all actions in the system. Currently, only Applications sent to others are logged.
 - Create mental models for each Player to interpret other Player's actions to use in their decisions.
 - Create reaction functions. Each Player should have functions for reacting to other player moves and updating their mental models.
