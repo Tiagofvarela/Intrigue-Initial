@@ -16,7 +16,7 @@ class Player(metaclass=abc.ABCMeta):
     money:int
     colour:Player_Colour
     palace_applicants:list[Application]     #List of current applications.
-    history_applications:list[Application]  #List of previous applications.
+    history_applications:list[tuple[Application,Player]]  #List of previous applications.
     
     def __init__(self, colour:Player_Colour):
         """Creates a new player with their colour, money, pieces and palace."""
@@ -53,7 +53,7 @@ class Player(metaclass=abc.ABCMeta):
     ###TO IMPLEMENT###
     @abc.abstractmethod
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
-        """Chooses a piece to send and a player to send it to. Returns Application and Player to send it to.
+        """Chooses a piece to send and a player to send it to. Returns Application and Player to send it to. Piece is removed from hand.
         \nRegisters which square and piece they have sent sent."""  
     @abc.abstractmethod      
     def select_square_to_place(self, board:Gameboard, players:list[Player], application:Application, bribes:dict[Application,int]) -> Square:
@@ -62,7 +62,7 @@ class Player(metaclass=abc.ABCMeta):
     def resolve_external_conflict(self, board:Gameboard, players:list[Player], bribes:dict[Application,int]) -> Application:
         """Given list of conflicting applications, picks one to keep and returns it."""
     @abc.abstractmethod
-    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], bribes:dict[Application,int]) -> Piece:
+    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]) -> Piece:
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
     @abc.abstractmethod
     def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:

@@ -18,14 +18,20 @@ class Game():
             for i in range(4):
                 self.boards.append([Square(0),Square(1),Square(2),Square(3)])
                 print("Creating player of type",player_types[i])
-                if player_types[i] == 'random':
-                    self.players.append(PlayerRandom(Player_Colour(i)))
-                elif player_types[i] == 'human':
-                    self.players.append(PlayerHuman(Player_Colour(i)))
-                elif player_types[i] == 'honest':
-                    self.players.append(PlayerHonest(Player_Colour(i)))
-                else:
-                    raise Exception(player_types[i]+" is an invalid player type.")
+                def str_to_class(classname):
+                    return getattr(sys.modules[__name__], classname)
+                self.players.append(str_to_class(player_types[i])(Player_Colour(i)))
+                # if player_types[i] == 'random':
+                #     self.players.append(PlayerRandom(Player_Colour(i)))
+                # elif player_types[i] == 'human':
+                #     self.players.append(PlayerHuman(Player_Colour(i)))
+                # elif player_types[i] == 'honest':
+                #     self.players.append(PlayerHonest(Player_Colour(i)))
+                # else:
+                #     raise Exception(player_types[i]+" is an invalid player type.")
+        except AttributeError as e:
+            print("\nError: The class name given does not exist inside intrigue.py")
+            exit()
         except Exception as e:
             print("\nError:",e.args[0])
             print("Please indicate four player types by writing four type names separated by spaces.")
@@ -125,7 +131,7 @@ class PlayerRandom(Player):
         player = players[player_i]
         application = (piece_to_play, board[player_i][square_i])
         #Saves square and piece each time they make a request.
-        self.history_applications.append(application)
+        self.history_applications.append((application,player))
         return application,player
     
     def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
@@ -174,7 +180,7 @@ class PlayerHonest(Player):
         #player.palace_applicants.append(application)        
 
         #Saves square and piece each time they make a request.
-        self.history_applications.append(application)
+        self.history_applications.append((application,player))
         return application,player
 
     def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
@@ -228,7 +234,7 @@ class PlayerHuman(Player):
         player = players[player_i]
         application = (piece_to_play, board[player_i][square_i])
         #Saves square and piece each time they make a request.
-        self.history_applications.append(application)
+        self.history_applications.append((application,player))
         return application,player
 
     def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
