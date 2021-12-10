@@ -85,4 +85,4 @@ To create a new Player Type, Player must be extended, and the above functions mu
 : A random player who chooses randomly what to do out of their possible action space.
 
 **PlayerHonest**
-: An honest player who always acts fairly, accepting the Pieces with the highest bribe and sending Applications for the highest paying jobs.
+: An honest player who always acts fairly, accepting the Pieces with the highest bribe and sending Applications for the highest paying jobs. The attempt to bribe fairly for each position, aiming to be the highest paying briber.
