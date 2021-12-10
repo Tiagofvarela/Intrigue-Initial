@@ -5,7 +5,7 @@ from piece import Piece
 from square import Square
 from random import choice, randint
 import sys
-from colorama import Fore, Style
+#from colorama import Fore, Style
 
 class Game():
     boards:Gameboard
@@ -16,19 +16,12 @@ class Game():
         self.players = []
         try:
             for i in range(4):
-                self.boards.append([Square(0),Square(1),Square(2),Square(3)])
-                print("Creating player of type",player_types[i])
                 def str_to_class(classname):
                     return getattr(sys.modules[__name__], classname)
+                print("Creating player of type",player_types[i])
                 self.players.append(str_to_class(player_types[i])(Player_Colour(i)))
-                # if player_types[i] == 'random':
-                #     self.players.append(PlayerRandom(Player_Colour(i)))
-                # elif player_types[i] == 'human':
-                #     self.players.append(PlayerHuman(Player_Colour(i)))
-                # elif player_types[i] == 'honest':
-                #     self.players.append(PlayerHonest(Player_Colour(i)))
-                # else:
-                #     raise Exception(player_types[i]+" is an invalid player type.")
+                #Line of Squares owned by Player i.
+                self.boards.append([Square(0,self.players[-1]),Square(1,self.players[-1]),Square(2,self.players[-1]),Square(3,self.players[-1])])
         except AttributeError as e:
             print("\nError: The class name given does not exist inside intrigue.py")
             exit()
@@ -56,17 +49,17 @@ class Game():
             p.pieces.remove(app[0])
             player.palace_applicants.append(app)   
 
-        def select_colour(colour_name):  
-            if colour_name == 'RED':
-                return Fore.RED
-            elif colour_name == "GREEN":
-                return Fore.GREEN
-            elif colour_name == "BLUE":
-                return Fore.BLUE
-            elif colour_name == "YELLOW":
-                return Fore.YELLOW
-            else:
-                return ""
+        # def select_colour(colour_name):  
+        #     if colour_name == 'RED':
+        #         return Fore.RED
+        #     elif colour_name == "GREEN":
+        #         return Fore.GREEN
+        #     elif colour_name == "BLUE":
+        #         return Fore.BLUE
+        #     elif colour_name == "YELLOW":
+        #         return Fore.YELLOW
+        #     else:
+        #         return ""
         
         counter = 1
         while counter <= 6:
@@ -134,7 +127,7 @@ class PlayerRandom(Player):
         self.history_applications.append((application,player))
         return application,player
     
-    def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
+    def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
         #Bribe is set to random value between min and a fourth of total.
         bribe = randint(MINIMUM_BRIBE, max(round(self.money/4),MINIMUM_BRIBE) )
         self.money -= bribe
@@ -163,27 +156,88 @@ class PlayerHonest(Player):
         Player.__init__(self, colour)
 
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
-        #Choose random player and square.
-        player_i = randint(0,3)
-        while Player_Colour(player_i) == self.colour:
-            player_i = randint(0,3)
-        square_i = randint(0,3)
+        def choose_squares() -> list[Square]:
+            """Returns contender squares to send a piece to."""
+            most_valuable_squares:list[Square] = self.get_max_value_available_squares(board)            
+            
+            #No valid free squares found.
+            #Starts looking in 10000 squares (index 2), then 6000 (index 1), and so on.
+            priority = [2,1,3,0]
+            priority_counter = 0
+            while len(most_valuable_squares) == 0:
+                for i in range(len(board)):
+                    square = board[i][ priority[priority_counter] ]
+                    if not square.piece:    #Any free squares must be invalid.
+                        continue
+                    #It must be possible to send piece to the square, competing with the piece already there.
+                    can_compete = len([p for p in self.pieces if p.type == square.piece.type]) > 0
+                    if Player_Colour(i) != self.colour and square.piece.owner != self and can_compete:
+                        most_valuable_squares.append(square)
+                priority_counter += 1
+                if not priority_counter <= 4:
+                    print(self.pieces)
+                    raise Exception("Could not find a Square to send Piece to.")   #Stop execution if unexpected behaviour occurs.
+            return most_valuable_squares
 
-        #Select random piece.
-        piece_to_play:Piece = choice(self.pieces)
-        #self.pieces.remove(piece_to_play)
+        def choose_player(squares:list[Square]) -> Square: 
+            """Given the potential squares, chooses the square from the preferred player."""           
+            #Choose a square from a Player who has accepted an application last time.
+            chosen_square:Square
+            for square in squares:
+                if len(self.history_applications) >= 2:
+                    for application,player in self.history_applications[-2::1]: #Last two applications.
+                        if square.owner == player and application[1].piece == application[0]:
+                                chosen_square = square
+                                break
+            #No accepted application found. 
+            else:
+                #Find a player whose pieces we host.
+                for player in [s.owner for s in squares]:
+                    for square in board[self.colour.value]:
+                        if square.piece and square.piece.owner == player:
+                            chosen_square = square
+                            break
+                #No accepted application found. 
+                else:
+                    #Find poorest possible player.
+                    min_money = min([p.money for p in [s.owner for s in squares]])
+                    chosen_square = [s for s in squares if s.owner.money == min_money][0]
+            return chosen_square
+        def choose_piece(square:Square) -> Piece:
+            """Choose an appropriate piece to send to and attain desired square."""           
+            if square.piece:
+                #To get position we must match piece type.
+                return [p for p in self.pieces if p.type == square.piece.type][0]
+            
+            #Else, avoid conflicting with other pieces to guarantee position.
+            other_pieces_in_row = [s.piece for s in board[square.owner.colour.value] if s.piece]
+            possible_pieces = [p for p in self.pieces if p.type not in [p2.type for p2 in other_pieces_in_row]]
 
-        #Add piece and preferred square (Piece,Square) to application.
-        player = players[player_i]
-        square = board[player_i][square_i]
-        application = (piece_to_play, square)
-        #player.palace_applicants.append(application)        
+            conflicting_types = [a[0].type for a in square.owner.palace_applicants]
+            even_better_possible_pieces = [p for p in possible_pieces if p.type not in conflicting_types]
+
+            if len(even_better_possible_pieces) > 0:
+                return choice(even_better_possible_pieces)
+            elif len(possible_pieces) > 0:
+                return choice(possible_pieces)
+
+            print(square)
+            print(board[square.owner.colour.value])
+            print(self.pieces)
+            print(self.get_max_value_available_squares(board))
+            raise Exception("The Square is empty, yet a non-conflicting piece couldn't be found.")
+
+        square = choose_player(choose_squares())
+        player = square.owner
+        piece = choose_piece(square)
+
+        application = (piece, square)   
 
         #Saves square and piece each time they make a request.
         self.history_applications.append((application,player))
         return application,player
 
-    def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
+    def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
         #Bribe is set to the largest of the group, or the value of the square if no one has bribed yet.
         bribe = min(max(list(previous_bribes.values())) + 1, self.money) 
         #If no one has bribed yet.
@@ -237,7 +291,7 @@ class PlayerHuman(Player):
         self.history_applications.append((application,player))
         return application,player
 
-    def decide_bribe(self, application:Application, player:Player, previous_bribes:dict[Application,int]) -> int:
+    def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
         print("Application: "+str(application))
         #print("Applicant bribes (-1 are unknown): "+str(previous_bribes))
         print("Select bribe amount (value will be adjusted to the nearest limit). Min",MINIMUM_BRIBE,"Max",self.money)
@@ -261,13 +315,13 @@ class PlayerHuman(Player):
     def resolve_external_conflict(self, board:Gameboard, players:list[Player], bribes:dict[Application,int]):
         print("Applicant bribes: "+str(bribes))
         print("\nOut of the applicants, choose one. Type the index of the applicant:")
-        chosen = bribes[int(input())]   #dict are ordered
+        chosen = list(bribes.keys())[int(input())]   #dict are ordered
         return chosen
 
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]):
-        print("Applicant bribes for square "+board_square+": "+str(bribes))
+        print("Applicant bribes for square "+str(board_square)+": "+str(bribes))
         print("\nOut of the two applicants, choose one. Type the index of the piece:")
-        chosen = bribes[int(input())]   #dict are ordered
+        chosen = list(bribes.keys())[int(input())]   #dict are ordered
         return chosen
 
 run()

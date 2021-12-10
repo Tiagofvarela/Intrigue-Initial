@@ -121,16 +121,36 @@ class Player(metaclass=abc.ABCMeta):
         previous_bribes:dict[Application,int] = {application:-1 for application in applications}
         #Ask for bribe from each player.
         for application in applications:
-            bribe = application[0].owner.decide_bribe(application, self, previous_bribes)
+            bribe = application[0].owner.decide_bribe(application, previous_bribes)
             self.money += bribe
             print(application[0].owner.colour.name+" has paid "+str(bribe)+" for "+str(application))
             previous_bribes[application] = bribe
-        return previous_bribes
-    
-    # def log_bribe(self, bribe:int, application:Application) -> int:
-    #     """Registers the bribe as having been received, increasing own money."""
-    #     self.money += bribe
-    #     print(application[0].owner.colour.name+" has paid "+str(bribe)+" for "+str(application))    
+        return previous_bribes    
+
+    def get_max_value_available_squares(self, board:Gameboard):
+        """Returns the most valuable and valid squares available on the board, or an empty list if there's no available square.
+        \nA Square is invalid if it's impossible for self to send a Piece to it. (Ex: Square is empty but self only has PRIEST pieces, 
+        which already have a job in the palace.)"""
+        most_valuable_squares:list[Square] = []
+        current_max_value = 0
+        #Look for most valuable Squares.
+        for i in range(len(board)):
+            if Player_Colour(i) == self.colour:
+                continue
+            for j in range(len(board[i])):
+                square = board[i][j]
+                #Valid if player has a Piece Type to send not already on the board.
+                valid = len([p for p in self.pieces if p.type not in self.get_row_types(board[i]) ]) > 0
+                #Square is occupied or invalid.
+                if square.piece or not valid:
+                    continue
+                #Create new tier of max value or append to current tier.
+                if square.value > current_max_value:
+                    current_max_value = square.value
+                    most_valuable_squares = [square]
+                elif square.value == current_max_value:
+                    most_valuable_squares.append(square)
+        return most_valuable_squares  
         
     def get_max_bribe_application(self, bribes:dict[Application,int]):
         """Gets the application with the highest corresponding bribe."""
@@ -142,6 +162,14 @@ class Player(metaclass=abc.ABCMeta):
                 max_bribe = bribe
                 max_application = application
         return max_application
+
+    def get_row_pieces(self, row:list[Square]):
+        """Given a row of squares, returns the pieces within."""
+        return [s.piece for s in row if s.piece != None]
+
+    def get_row_types(self, row:list[Square]):
+        """Given a row of Squares, returns the types for all pieces within."""
+        return [p.type for p in self.get_row_pieces(row)]
 
     def applicants_string(self) -> str:
         """Returns a string representing the applicants."""

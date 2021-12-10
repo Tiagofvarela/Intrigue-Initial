@@ -22,11 +22,12 @@ The existing Classes are as follows:
 | ----------- | ----------- |
 | piece:Piece | The piece contained in the Square. |
 | value:int | The value of this Square, for salary collection. |
+| owner:Player | This Square's owner. |
 
 ### Piece
 | Attributes| Description |
 | ----------- | ----------- |
-| owner:Player | This piece's owner. |
+| owner:Player | This Piece's owner. |
 | type:Piece_Type | The type of Piece this is. The available Player_Types are: SCIENTIST, DOCTOR, CLERK, PRIEST |
 
 ### Application
@@ -86,3 +87,8 @@ To create a new Player Type, Player must be extended, and the above functions mu
 
 **PlayerHonest**
 : An honest player who always acts fairly, accepting the Pieces with the highest bribe and sending Applications for the highest paying jobs.
+
+## TODO
+- Log all actions in the system. Currently, only Applications sent to others are logged.
+- Create mental models for each Player to interpret other Player's actions to use in their decisions.
+- Create reaction functions. Each Player should have functions for reacting to other player moves and updating their mental models.
