@@ -1,5 +1,5 @@
 from __future__ import annotations
-from intrigue_datatypes import Piece_Type
+from intrigue_datatypes import Piece_Type, Player_Colour
 
 class Piece:    
     owner:player.Player
@@ -26,6 +26,9 @@ class Piece:
     #     self.bribe = MINIMUM_BRIBE
     #     return self.bribe_history[-1]
 
+    def __deepcopy__(self, memo) -> LogPiece:
+        return LogPiece(self.owner.colour, self.type)
+
     def __eq__(self, other):
         """Checks type and owner, making for a unique piece (with a clone)."""
         if isinstance(other, Piece):
@@ -43,5 +46,12 @@ class Piece:
     def __repr__(self):
         return str(self.owner.colour.name) + " " +str(self.type.name)
 
+class LogPiece(Piece):
+    def __init__(self, player: player.Player_Colour, type: Piece_Type):
+        self.player_colour = player
+        self.type = type
+    
+    def __repr__(self):
+        return str(self.player_colour.name) + " " +str(self.type.name)
     
 import player

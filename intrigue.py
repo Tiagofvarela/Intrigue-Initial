@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import Any
 from intrigue_datatypes import Player_Colour, MINIMUM_BRIBE
 from player import Application, Gameboard, Player
 from piece import Piece
 from square import Square
 from random import choice, randint
-import sys
+import sys, copy
 #from colorama import Fore, Style
 
 class Game():
@@ -60,6 +61,8 @@ class Game():
         #         return Fore.YELLOW
         #     else:
         #         return ""
+
+        #game_log:list[dict[str,Any]] = [{"earnings_log":[], }]
         
         counter = 1
         while counter <= 6:
@@ -160,6 +163,7 @@ class PlayerHonest(Player):
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
         def choose_squares() -> list[Square]:
             """Returns contender squares to send a piece to."""
+            #TODO: Select possible squares randomly.
             most_valuable_squares:list[Square] = self.get_max_value_available_squares(board)            
             
             #No valid free squares found.

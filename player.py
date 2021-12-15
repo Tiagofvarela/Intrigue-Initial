@@ -7,7 +7,7 @@ import abc
 Application = tuple[Piece,Square]
 Gameboard = list[list[Square]]
 
-class Player(metaclass=abc.ABCMeta):
+class Player():
     """This class should hold only the information that's unique to it, and receive all other information it needs from Game.
     \nTo create new behaviours, extend this class and implement play_piece, place_uncontested, resolve_external_conflict, and
     resolve_internal_conflict."""
@@ -16,9 +16,10 @@ class Player(metaclass=abc.ABCMeta):
     money:int
     colour:Player_Colour
     palace_applicants:list[Application]     #List of current applications.
+    #TODO: Eliminate unecessary logs after creating main game log.
     history_applications:list[tuple[Application,Player]]  #List of previous applications.
     
-    def __init__(self, colour:Player_Colour):
+    def __init__(self, colour:Player_Colour, copy:Player = None):
         """Creates a new player with their colour, money, pieces and palace."""
         def generate_initial_pieces() -> list[Piece]:
             """Generates 8 pieces, two of each type, returned as a list."""
@@ -30,6 +31,19 @@ class Player(metaclass=abc.ABCMeta):
             pieces += generate_two_pieces(Piece_Type.PRIEST)
             pieces += generate_two_pieces(Piece_Type.CLERK)
             return pieces
+        
+        #This instance should be a copy of the above player.
+        if copy:
+            self.pieces = []
+            for piece in copy.pieces:
+                self.pieces += [Piece(self,piece.type)]
+            self.money = copy.money
+            self.colour = copy.colour
+            self.palace_applicants = []
+            for app_piece,app_square in copy.palace_applicants:
+                self.palace_applicants += [(app_piece.__deepcopy__(None), app_square.__deepcopy__(None))]
+            return
+                
 
         self.pieces = generate_initial_pieces()
         self.money = STARTING_MONEY
@@ -177,6 +191,10 @@ class Player(metaclass=abc.ABCMeta):
         for piece,square in self.palace_applicants:
             string += str(piece)+"; "
         return string
+
+    def __deepcopy__(self, memo):
+        return Player(self.colour,self) #Copy of my self.
+
     def __eq__(self, other):
         if isinstance(other, Player):
             return self.colour == other.colour

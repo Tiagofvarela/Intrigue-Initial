@@ -10,10 +10,11 @@ Example:<br>
 `python intrigue.py PlayerRandom PlayerHonest PlayerHuman PlayerHonest`
 
 ## Game Structure
-The game is currently implemented for four players, each a different colour, where each player owns:
-- A palace with 4 Squares.
-- 8 Pieces of their colour.
-- 32000 Ducats (currency).
+The game is currently implemented for four players, each a different colour, where each player owns:<br>
+
+- A palace with 4 Squares.<br>
+- 8 Pieces of their colour.<br>
+- 32000 Ducats (currency).<br>
 
 The existing Classes are as follows:
 
@@ -58,10 +59,11 @@ This is done twice, sending two pieces each turn at the end of their turn until 
 #### Collect Salaries
 All of the Player's Pieces currently in a Square collect the salary corresponding to that Square's value.
 #### Resolve Conflicts
-The Player must deal with the Applications they themselves received from the other Players:
-1. If the Player received multiple Applications from the same type of Piece (ex. PRIEST), then the Player must pick one to pick, rejecting the others.
-2. If the Player received an Application for a type of Piece that already has a Square, then the Player must choose whether to keep that Piece or replace it with the new one.
-3. Otherwise, the Application does not have a conflict, and must simply be placed in a Square of the Player's choosing.
+The Player must deal with the Applications they themselves received from the other Players:<br>
+
+1. If the Player received multiple Applications from the same type of Piece (ex. PRIEST), then the Player must pick one to pick, rejecting the others.<br>
+2. If the Player received an Application for a type of Piece that already has a Square, then the Player must choose whether to keep that Piece or replace it with the new one.<br>
+3. Otherwise, the Application does not have a conflict, and must simply be placed in a Square of the Player's choosing.<br>
 
 During 1, 2 and 3, the Player asks the owners of the Pieces to give them a bribe (minimum of 1000). This process is public and a Player is not bound by any deals made at this point. If a RED PRIEST and a BLUE PRIEST are competing for a job, and the BLUE owner bribes for 8000 whereas the RED owner bribes 1000, the Player may choose to reject BLUE and keep RED.
 
