@@ -4,6 +4,8 @@ This program simulates a game of Intrigue based on the board game (https://board
 The goal of the game is to end the 6th round as the richest Player. Each turn Players send their Pieces to other Players to get a job. Each Piece that gets a job collects a salary each turn. Each Player owns a palace with four jobs, so they must accept 4 pieces for these jobs. However, when multiple pieces apply for the same position, or more pieces apply than there are jobs, the Player chooses which pieces to reject, removing them from the game.
 
 ## How to Run
+Python 3.9 is required to execute the program.
+
 To execute, run the following in the command console, choosing a player type out of the existing ones:<br>
 `python path_to_intrigue.py [player_type_classname] [player_type_classname] [player_type_classname] [player_type_classname]`<br>
 Example:<br>

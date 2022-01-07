@@ -141,10 +141,10 @@ class Player():
             previous_bribes[application] = bribe
         return previous_bribes    
 
-    def get_max_value_available_squares(self, board:Gameboard):
-        """Returns the most valuable and valid squares available on the board, or an empty list if there's no available square.
-        \nA Square is invalid if it's impossible for self to send a Piece to it. (Ex: Square is empty but self only has PRIEST pieces, 
-        which already have a job in the palace.)"""
+    def get_max_value_unoccupied_squares(self, board:Gameboard):
+        """Returns the most valuable and valid squares available on the board, or an empty list if there's no unoccupied square.
+        \nA Square is invalid if it's impossible for self to send a Piece to it. (Ex: |Clerk||Doctor||None||Priest| 
+        A player that cannot send a Scientist can never obtain the None Square in this palace, so it's an invalid Square.)"""
         most_valuable_squares:list[Square] = []
         current_max_value = 0
         #Look for most valuable Squares.

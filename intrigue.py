@@ -164,23 +164,22 @@ class PlayerHonest(Player):
         def choose_squares() -> list[Square]:
             """Returns contender squares to send a piece to."""
             #TODO: Select possible squares randomly.
-            most_valuable_squares:list[Square] = self.get_max_value_available_squares(board)            
+            most_valuable_squares:list[Square] = self.get_max_value_unoccupied_squares(board)            
             
-            #No valid free squares found.
             #Starts looking in 10000 squares (index 2), then 6000 (index 1), and so on.
             priority = [2,1,3,0]
             priority_counter = 0
-            while len(most_valuable_squares) == 0:
+            while len(most_valuable_squares) == 0:  #No valid free squares found. GET MAX VALUE UNNOCUPIED SQUARES
                 for i in range(len(board)):
                     square = board[i][ priority[priority_counter] ]
-                    if not square.piece:    #Any free squares must be invalid.
+                    if not square.piece:    #Any free squares were already considered by previous function.
                         continue
                     #It must be possible to send piece to the square, competing with the piece already there.
                     can_compete = len([p for p in self.pieces if p.type == square.piece.type]) > 0
                     if Player_Colour(i) != self.colour and square.piece.owner != self and can_compete:
                         most_valuable_squares.append(square)
                 priority_counter += 1
-                if not priority_counter <= 4:
+                if priority_counter > 4:
                     print(self.pieces)
                     raise Exception("Could not find a Square to send Piece to.")   #Stop execution if unexpected behaviour occurs.
             return most_valuable_squares
@@ -216,21 +215,24 @@ class PlayerHonest(Player):
                 return [p for p in self.pieces if p.type == square.piece.type][0]
             
             #Else, avoid conflicting with other pieces to guarantee position.
+
+            #Avoid conflicting with palace pieces.
             other_pieces_in_row = [s.piece for s in board[square.owner.colour.value] if s.piece]
-            possible_pieces = [p for p in self.pieces if p.type not in [p2.type for p2 in other_pieces_in_row]]
+            no_palace_conflicts = [p for p in self.pieces if p.type not in [p2.type for p2 in other_pieces_in_row]]
 
+            #Avoid conflicting with other applications.
             conflicting_types = [a[0].type for a in square.owner.palace_applicants]
-            even_better_possible_pieces = [p for p in possible_pieces if p.type not in conflicting_types]
+            no_application_conflicts = [p for p in no_palace_conflicts if p.type not in conflicting_types]
 
-            if len(even_better_possible_pieces) > 0:
-                return choice(even_better_possible_pieces)
-            elif len(possible_pieces) > 0:
-                return choice(possible_pieces)
+            if len(no_application_conflicts) > 0:   #No conflicts at all.
+                return choice(no_application_conflicts)
+            elif len(no_palace_conflicts) > 0:      #Conflicts only with applications.
+                return choice(no_palace_conflicts)
 
             print(square)
             print(board[square.owner.colour.value])
             print(self.pieces)
-            print(self.get_max_value_available_squares(board))
+            print(self.get_max_value_unoccupied_squares(board))
             raise Exception("The Square is empty, yet a non-conflicting piece couldn't be found.")
 
         square = choose_player_square(choose_squares())
