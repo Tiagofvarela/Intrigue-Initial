@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from intrigue_datatypes import Player_Colour, MINIMUM_BRIBE
-from player import Application, Gameboard, Player
+from player import Application, Gameboard, Player, copy_application
 from piece import Piece
 from square import Square
 from random import choice, randint
@@ -43,41 +43,40 @@ class Game():
                 resolve_internal_conflict()\n
             play_piece() * 2
         """
-        def player_send_piece(p:Player):
+        def player_send_piece(p:Player) -> tuple[Application,Player]:
+            """Player p sends a piece to a player of their choosing."""
             app, player = p.play_piece(self.boards, self.players)
             #Remove piece from p and send to player.
             print(p.colour.name+" sent "+str(app[0])+" to "+player.colour.name)
             p.pieces.remove(app[0])
             player.palace_applicants.append(app)   
-
-        # def select_colour(colour_name):  
-        #     if colour_name == 'RED':
-        #         return Fore.RED
-        #     elif colour_name == "GREEN":
-        #         return Fore.GREEN
-        #     elif colour_name == "BLUE":
-        #         return Fore.BLUE
-        #     elif colour_name == "YELLOW":
-        #         return Fore.YELLOW
-        #     else:
-        #         return ""
+            return copy_application(app), player.__deepcopy__(None)
 
         #game_log:list[dict[str,Any]] = [{"earnings_log":[], }]
         
         counter = 1
         while counter <= 6:
-            print("\n############# ROUND ",counter," #############\n")
+            print("\n############# ROUND ",counter,"#############\n")
             for p in self.players:
-                p:Player
                 print("\n###",p.colour.name,"TURN ###\n")
-                p.collect_earnings(self.boards)  
-                p.resolve_applications(self.boards, self.players)
+
+                application_log:list[tuple[Application,Player]] = []
+                earnings_log = p.collect_earnings(self.boards)  
+                conflict_log, placement_log = p.resolve_applications(self.boards, self.players)
                 if counter <= 4:
                     print("\n# Send Pieces #\n")
-                    player_send_piece(p)
-                    player_send_piece(p)
+                    application_log.append( player_send_piece(p) )
+                    application_log.append( player_send_piece(p) )
                 print(self)
-                print("\n###",p.colour.name,"TURN  End###\nPress enter to continue.")
+                # print("Earnings:")
+                # print(earnings_log)
+                # print("Conflict Log:")
+                # print(conflict_log)
+                # print("Placement Log:")
+                # print(placement_log)
+                # print("Application Log:")
+                # print(application_log)
+                print("\n###",p.colour.name,"TURN  End ###\nPress enter to continue.")
                 input()
             counter += 1
 
@@ -154,7 +153,7 @@ class PlayerRandom(Player):
 
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]):        
         #Randomly choose to replace or not.
-        return choice(list(bribes.keys()))[0]
+        return choice(list(bribes.keys()))
 
 class PlayerHonest(Player):
     def __init__(self, colour:Player_Colour):
@@ -273,7 +272,7 @@ class PlayerHonest(Player):
 
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]):
         #Chooses highest bribing piece.
-        return self.get_max_bribe_application(bribes)[0]
+        return self.get_max_bribe_application(bribes)
 
 class PlayerHuman(Player):
     def __init__(self, colour:Player_Colour):

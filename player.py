@@ -7,6 +7,9 @@ import abc
 Application = tuple[Piece,Square]
 Gameboard = list[list[Square]]
 
+def copy_application(application:Application) -> Application:
+    return (application[0].__deepcopy__(None),application[1].__deepcopy__(None))
+
 class Player():
     """This class should hold only the information that's unique to it, and receive all other information it needs from Game.
     \nTo create new behaviours, extend this class and implement play_piece, place_uncontested, resolve_external_conflict, and
@@ -51,18 +54,20 @@ class Player():
         self.palace_applicants = []     #List of current applications.
         self.history_applications = []  #List of previous applications.
 
-    def collect_earnings(self, board:Gameboard):
+    def collect_earnings(self, board:Gameboard) -> list[Square]:
         """Player sweeps through each square and collects their earnings.
         Earnings include salaries and bribes from applicants."""
+        collected_salaries: list[Square] = []
         print("\n# Collect Salaries #\n")
         for i in range(len(board)):
             if Player_Colour(i) != self.colour: #Checks only others' palaces.
                 for j in range(4):
                     square = board[i][j]
                     if square.piece and square.piece.owner == self:
-                        #square.get_piece().earn_money(square.get_value())
                         self.money += square.value
-                        print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+Player_Colour(i).name+"'s palace.")
+                        print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+square.owner.colour.name+"'s palace.")
+                        collected_salaries.append(square.__deepcopy__(None))
+        return collected_salaries
 
     ###TO IMPLEMENT###
     @abc.abstractmethod
@@ -76,7 +81,7 @@ class Player():
     def resolve_external_conflict(self, board:Gameboard, players:list[Player], bribes:dict[Application,int]) -> Application:
         """Given list of conflicting applications, picks one to keep and returns it."""
     @abc.abstractmethod
-    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]) -> Piece:
+    def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]) -> Application:
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
     @abc.abstractmethod
     def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
@@ -84,13 +89,21 @@ class Player():
         \nAmount is subtracted from account."""
     ###################
 
-    def resolve_applications(self, board:Gameboard, players:list[Player]):
+    def resolve_applications(self, board:Gameboard, players:list[Player]) -> tuple[list[tuple[dict[Application, int], Application]], list[tuple[Application, int, Square]]]:
         """Resolves applications, first detecting and resolving external conflicts, then internal conflicts,
-        and finally placing the remaining pieces. \nBribes are collected during this phase."""
+        and finally placing the remaining pieces. \nBribes are collected during this phase. Returns conflict_log and placement_log.
+        conflict_log: List of (dictionary of conflict applications and corresponding bribe, chosen application)
+        placement_log: List of (application, bribe, square_placed_in)"""
         print("\n# Resolve Conflicts #\n")
         print(self.colour.name+" applications:"+str(self.palace_applicants))
         
         palace = board[self.colour.value]
+
+        #TODO: Logged applications should be copies, too.
+
+        conflicts_log:list[ tuple[dict[Application,int],Application] ] = [] #Logs all resolved conflicts: List of apps and bribes and chosen one.
+        placement_log:list[tuple[Application, int, Square]]= []             #Logs all placements: App, bribe, square.
+        bribes:dict[Application,int] = {}                                   #Saves resolved external applications for handling at the end.
 
         #Check external conflicts. 
         for type in range(100,104):
@@ -101,11 +114,15 @@ class Player():
 
             #Picks an application to keep if there are several conflicting ones.
             if len(external_conflicts) > 1:
-                bribes = self.collect_bribes(external_conflicts)
-                chosen_application = self.resolve_external_conflict(board, players, bribes)
+                external_bribes = self.collect_bribes(external_conflicts)
+                chosen_application = self.resolve_external_conflict(board, players, external_bribes)
                 external_conflicts.remove(chosen_application)
                 self.palace_applicants = [a for a in self.palace_applicants if a not in external_conflicts]
+                #Save application to resolve later.
+                bribes[chosen_application] = external_bribes[chosen_application]
+                #Log Conflict Resolution
                 print(self.colour.name+" discarded "+str(external_conflicts))
+                conflicts_log.append( (external_bribes,copy_application(chosen_application)) )
 
         #Check internal conflicts.
         for board_square in palace:
@@ -113,22 +130,33 @@ class Player():
                 for application in self.palace_applicants.copy():
                     #Chooses which of the two pieces to keep.
                     if board_square.piece.type == application[0].type:
-                        bribes = self.collect_bribes([application,(board_square.piece,board_square)])
-                        chosen_piece = self.resolve_internal_conflict(board, players, board_square, bribes)
-                        print(self.colour.name+" chose "+str(chosen_piece)+" out of "+str(board_square.piece)+" and "+str(application[0]))
-                        board_square.piece = chosen_piece                    
+                        internal_bribes = self.collect_bribes([application,(board_square.piece,board_square)])
+                        chosen_application = self.resolve_internal_conflict(board, players, board_square, internal_bribes)
+                        #Log placement
+                        print(self.colour.name+" chose "+str(chosen_application[0])+" out of "+str(board_square.piece)+" and "+str(application[0]))
+                        conflicts_log.append( (internal_bribes,copy_application(chosen_application)) )
+                        placement_log.append( (copy_application(chosen_application),internal_bribes[chosen_application],board_square.__deepcopy__(None)) )
+                        #Place piece.
+                        board_square.piece = chosen_application[0]                    
                         self.palace_applicants.remove(application)
 
-        #Resolve remainder.
-        bribes = self.collect_bribes(self.palace_applicants)
+
+        #Resolve remainder (bribes for already bribed taken from earlier). 
+        applicants_not_already_bribed = [a for a in self.palace_applicants if a not in [app for app in bribes]]
+        bribes.update(self.collect_bribes(applicants_not_already_bribed))
         for application in self.palace_applicants.copy():
             square = self.select_square_to_place(board, players, application, bribes)
+            #Log placement
             print(self.colour.name+" took "+str(application)+" request and placed piece at "+repr(square))
+            placement_log.append( (copy_application(application),bribes[application],square.__deepcopy__(None)) )
+            #Place piece
             square.piece = application[0]
             self.palace_applicants.remove(application)
         
         if len(self.palace_applicants) > 0:
             raise(Exception("Not all applications were handled."))
+
+        return conflicts_log, placement_log
 
     def collect_bribes(self, applications:list[Application]) -> dict[Application,int]:
         """Collects all bribes from a list of applications and returns a dictionary of how much each application paid."""
