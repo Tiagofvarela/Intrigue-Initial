@@ -1,5 +1,5 @@
 from __future__ import annotations
-from intrigue_datatypes import Piece_Type, Player_Colour
+from intrigue_datatypes import Piece_Type
 
 class Piece:    
     owner:player.Player
@@ -9,25 +9,9 @@ class Piece:
         """Creates a piece for Player player of Type type."""
         self.owner = player      #Piece's owner.
         self.type = type     #Type of piece
-        #self.money_earned:int = 0      #Money accumulated by this piece.
-        # self.bribe = MINIMUM_BRIBE  #How much the owner will pay to get the piece where it is requesting.
-        # self.bribe_history = []
-    
-    #def earn_money(self, money: int):
-        #"""Increases amount of money this piece has earned."""
-        #self.money_earned += money
-        #TODO: Consider having the pieces automatically increase their player's money when this value is updated.
-        #Or, having the player walk through their pieces, earn money in each and receive it.
 
-    # def collect_bribe(self) -> int:
-    #     """The caller collects the bribe from this piece, setting it to minimum and removing the money from the piece's owner."""
-    #     self.owner.money -= self.bribe #Owner pays
-    #     self.bribe_history.append(self.bribe)
-    #     self.bribe = MINIMUM_BRIBE
-    #     return self.bribe_history[-1]
-
-    def __deepcopy__(self, memo) -> LogPiece:
-        return LogPiece(self.owner.colour, self.type)
+    def copy(self) -> Piece:
+        return Piece(self.owner, self.type)
 
     def __eq__(self, other):
         """Checks type and owner, making for a unique piece (with a clone)."""
@@ -45,13 +29,5 @@ class Piece:
         return self.__repr__()#+" Earned: "+str(0)
     def __repr__(self):
         return str(self.owner.colour.name) + " " +str(self.type.name)
-
-class LogPiece(Piece):
-    def __init__(self, player: player.Player_Colour, type: Piece_Type):
-        self.player_colour = player
-        self.type = type
-    
-    def __repr__(self):
-        return str(self.player_colour.name) + " " +str(self.type.name)
     
 import player

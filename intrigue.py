@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Any
+from gamelog import GameLog
 from intrigue_datatypes import Player_Colour, MINIMUM_BRIBE
-from player import Application, Gameboard, Player, copy_application
+from player import Application, Gameboard, Player, copy_application, copy_gameboard
 from piece import Piece
 from square import Square
 from random import choice, randint
-import sys, copy
+import sys
 #from colorama import Fore, Style
 
 class Game():
@@ -50,9 +50,10 @@ class Game():
             print(p.colour.name+" sent "+str(app[0])+" to "+player.colour.name)
             p.pieces.remove(app[0])
             player.palace_applicants.append(app)   
-            return copy_application(app), player.__deepcopy__(None)
+            return copy_application(app), player.copy()
 
         #game_log:list[dict[str,Any]] = [{"earnings_log":[], }]
+        gamelog = GameLog()
         
         counter = 1
         while counter <= 6:
@@ -68,14 +69,7 @@ class Game():
                     application_log.append( player_send_piece(p) )
                     application_log.append( player_send_piece(p) )
                 print(self)
-                # print("Earnings:")
-                # print(earnings_log)
-                # print("Conflict Log:")
-                # print(conflict_log)
-                # print("Placement Log:")
-                # print(placement_log)
-                # print("Application Log:")
-                # print(application_log)
+                gamelog.log_turn(counter,p.colour.value,earnings_log,conflict_log,placement_log,application_log,copy_gameboard(self.boards))
                 print("\n###",p.colour.name,"TURN  End ###\nPress enter to continue.")
                 input()
             counter += 1
@@ -108,7 +102,7 @@ def run():
     player_types.pop(0)
 
     Game(player_types).play_game()
-    print("Running!")
+    #print("Running!")
 
 ############################################### Player Classes ###############################################
 

@@ -8,7 +8,15 @@ Application = tuple[Piece,Square]
 Gameboard = list[list[Square]]
 
 def copy_application(application:Application) -> Application:
-    return (application[0].__deepcopy__(None),application[1].__deepcopy__(None))
+    return (application[0].copy(),application[1].copy())
+def copy_gameboard(board:Gameboard) -> Gameboard:
+    copy:list[list[Square]] = []
+    for palace in board:
+        palace_copy:list[Square] = []
+        for square in palace:
+            palace_copy.append(square.copy())
+        copy.append(palace_copy)
+    return copy
 
 class Player():
     """This class should hold only the information that's unique to it, and receive all other information it needs from Game.
@@ -44,7 +52,7 @@ class Player():
             self.colour = copy.colour
             self.palace_applicants = []
             for app_piece,app_square in copy.palace_applicants:
-                self.palace_applicants += [(app_piece.__deepcopy__(None), app_square.__deepcopy__(None))]
+                self.palace_applicants += [(app_piece.copy(), app_square.copy())]
             return
                 
 
@@ -66,7 +74,7 @@ class Player():
                     if square.piece and square.piece.owner == self:
                         self.money += square.value
                         print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+square.owner.colour.name+"'s palace.")
-                        collected_salaries.append(square.__deepcopy__(None))
+                        collected_salaries.append(square.copy())
         return collected_salaries
 
     ###TO IMPLEMENT###
@@ -135,7 +143,7 @@ class Player():
                         #Log placement
                         print(self.colour.name+" chose "+str(chosen_application[0])+" out of "+str(board_square.piece)+" and "+str(application[0]))
                         conflicts_log.append( (internal_bribes,copy_application(chosen_application)) )
-                        placement_log.append( (copy_application(chosen_application),internal_bribes[chosen_application],board_square.__deepcopy__(None)) )
+                        placement_log.append( (copy_application(chosen_application),internal_bribes[chosen_application],board_square.copy()) )
                         #Place piece.
                         board_square.piece = chosen_application[0]                    
                         self.palace_applicants.remove(application)
@@ -148,7 +156,7 @@ class Player():
             square = self.select_square_to_place(board, players, application, bribes)
             #Log placement
             print(self.colour.name+" took "+str(application)+" request and placed piece at "+repr(square))
-            placement_log.append( (copy_application(application),bribes[application],square.__deepcopy__(None)) )
+            placement_log.append( (copy_application(application),bribes[application],square.copy()) )
             #Place piece
             square.piece = application[0]
             self.palace_applicants.remove(application)
@@ -220,7 +228,7 @@ class Player():
             string += str(piece)+"; "
         return string
 
-    def __deepcopy__(self, memo):
+    def copy(self):
         return Player(self.colour,self) #Copy of my self.
 
     def __eq__(self, other):
