@@ -1,8 +1,8 @@
 from __future__ import annotations
 from piece import Piece
 
-INDEX_VALUE_DICT = {0:1000, 1:6000, 2: 10000, 3:3000}
-VALUE_INDEX_DICT = {1000:0, 6000:1, 10000:2, 3000:3}
+INDEX_VALUE_DICT = {0:1, 1:6, 2: 10, 3:3}
+VALUE_INDEX_DICT = {1:0, 6:1, 10:2, 3:3}
 
 class Square:
     """Represents a square in a player board, having an inherent value and a piece."""
@@ -30,6 +30,6 @@ class Square:
     def __str__(self):
         return "|"+str(self.piece)+"|"
     def __repr__(self):
-        return "|"+str(self.piece)+" Value: "+str(self.value)+"|"
+        return "|"+str(self.piece)+" Value: "+str(self.value*1000)+"|"
 
 import player

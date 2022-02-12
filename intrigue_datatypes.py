@@ -1,10 +1,10 @@
 from enum import Enum
-import colorama
-from colorama import Fore, Style
+import colorama                     # type: ignore
+from colorama import Fore, Style    # type: ignore
 colorama.init()
 
-MINIMUM_BRIBE = 1000
-STARTING_MONEY = 32000
+MINIMUM_BRIBE = 1
+STARTING_MONEY = 32
 
 class Piece_Type(Enum):
     SCIENTIST = 100

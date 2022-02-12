@@ -242,7 +242,7 @@ class PlayerHonest(Player):
         #Bribe is set to the largest of the group, or the value of the square if no one has bribed yet.
         bribe = min(max(list(previous_bribes.values())) + 1, self.money) 
         #If no one has bribed yet.
-        if bribe < 1000:
+        if bribe < MINIMUM_BRIBE:
             bribe = min(application[1].value, self.money) 
         self.money -= bribe
         return bribe

@@ -73,7 +73,7 @@ class Player():
                     square = board[i][j]
                     if square.piece and square.piece.owner == self:
                         self.money += square.value
-                        print(self.colour.name+" collected "+str(square.value)+" from "+str(square)+" in "+square.owner.colour.name+"'s palace.")
+                        print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.colour.name+"'s palace.")
                         collected_salaries.append(square.copy())
         return collected_salaries
 
@@ -106,8 +106,6 @@ class Player():
         print(self.colour.name+" applications:"+str(self.palace_applicants))
         
         palace = board[self.colour.value]
-
-        #TODO: Logged applications should be copies, too.
 
         conflicts_log:list[ tuple[dict[Application,int],Application] ] = [] #Logs all resolved conflicts: List of apps and bribes and chosen one.
         placement_log:list[tuple[Application, int, Square]]= []             #Logs all placements: App, bribe, square.
@@ -173,7 +171,7 @@ class Player():
         for application in applications:
             bribe = application[0].owner.decide_bribe(application, previous_bribes)
             self.money += bribe
-            print(application[0].owner.colour.name+" has paid "+str(bribe)+" for "+str(application))
+            print(application[0].owner.colour.name+" has paid "+str(bribe*1000)+" for "+str(application))
             previous_bribes[application] = bribe
         return previous_bribes    
 
@@ -206,7 +204,7 @@ class Player():
         """Gets the application with the highest corresponding bribe."""
         max_application:Application
         max_bribe = 0
-        print(bribes)
+        #print(bribes)
         for application,bribe in bribes.items():
             if bribe > max_bribe:
                 max_bribe = bribe
@@ -238,6 +236,6 @@ class Player():
     def __hash__(self) -> int:
         return hash(self.colour)
     def __str__(self):
-        return "\n"+str(self.colour.name)+" Pieces: "+str(self.pieces)+" Money: "+str(self.money)
+        return "\n"+str(self.colour.name)+" Pieces: "+str(self.pieces)+" Money: "+str(self.money*1000)
     def __repr__(self):
         return str(self.colour)
