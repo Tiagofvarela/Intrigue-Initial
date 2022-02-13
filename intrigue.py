@@ -70,6 +70,7 @@ class Game():
                     application_log.append( player_send_piece(p) )
                 print(self)
                 gamelog.log_turn(counter,p.colour.value,earnings_log,conflict_log,placement_log,application_log,copy_gameboard(self.boards))
+                #print(gamelog.count_conflicts(gamelog.get_conflicts_involving_player(p.colour), p.colour))    #Conflict methods debug
                 print("\n###",p.colour.name,"TURN  End ###\nPress enter to continue.")
                 input()
             counter += 1
