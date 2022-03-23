@@ -122,8 +122,6 @@ class PlayerRandom(Player):
         #Add piece and preferred square (Piece,Square) to application.
         player = players[player_i]
         application = (piece_to_play, board[player_i][square_i])
-        #Saves square and piece each time they make a request.
-        self.history_applications.append((application,player))
         return application,player
     
     def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
@@ -183,11 +181,12 @@ class PlayerHonest(Player):
             #Choose a square from a Player who has accepted an application last time.
             chosen_square:Square
             for square in squares:
-                if len(self.history_applications) >= 2:
-                    for application,player in self.history_applications[-2::1]: #Last two applications.
-                        if square.owner == player and application[1].piece == application[0]:
-                                chosen_square = square
-                                break
+                # if len(self.history_applications) >= 2:
+                #     for application,player in self.history_applications[-2::1]: #Last two applications.
+                #         if square.owner == player and application[1].piece == application[0]:
+                #                 chosen_square = square
+                #                 break
+                pass
             #No accepted application found. 
             else:
                 #Find a player whose pieces we host.
@@ -234,9 +233,6 @@ class PlayerHonest(Player):
         piece = choose_piece(square)
 
         application = (piece, square)   
-
-        #Saves square and piece each time they make a request.
-        self.history_applications.append((application,player))
         return application,player
 
     def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
@@ -289,8 +285,6 @@ class PlayerHuman(Player):
         #Add piece and preferred square (Piece,Square) to application.
         player = players[player_i]
         application = (piece_to_play, board[player_i][square_i])
-        #Saves square and piece each time they make a request.
-        self.history_applications.append((application,player))
         return application,player
 
     def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
