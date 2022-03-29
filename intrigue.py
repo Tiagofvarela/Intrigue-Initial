@@ -13,26 +13,47 @@ class Game():
     players:list[Player]
     player_counter:int
 
-    def __init__(self, player_types:list[str]):
-        self.boards = []
-        self.players = []
-        self.player_counter = 0
-        try:
+    def __init__(self, player_types:list[str], boards:Gameboard=None, players:list[Player]=None, player_counter:int=0):
+        def str_to_class(classname):
+            return getattr(sys.modules[__name__], classname)
+        if players and boards:
+            self.boards = copy_gameboard(boards)
+            self.players = []
             for i in range(PLAYER_COUNT):
-                def str_to_class(classname):
-                    return getattr(sys.modules[__name__], classname)
-                print("Creating player of type",player_types[i])
-                self.players.append(str_to_class(player_types[i])(Player_Colour(i)))
-                #Line of Squares owned by Player i.
-                self.boards.append([Square(0,self.players[-1].colour),Square(1,self.players[-1].colour),Square(2,self.players[-1].colour),Square(3,self.players[-1].colour)])
-        except AttributeError as e:
-            print("\nError: The class name given does not exist inside intrigue.py")
-            exit()
-        except Exception as e:
-            print("\nError:",e.args[0])
-            print("Please indicate four player types by writing four type names separated by spaces.")
-            exit()
-        print(self)
+                self.players.append( str_to_class(player_types[i])(Player_Colour(i), players[i]) )
+            self.player_counter = player_counter
+        else:
+            self.boards = []
+            self.players = []
+            self.player_counter = 0
+            try:
+                for i in range(PLAYER_COUNT):
+                    print("Creating player of type",player_types[i])
+                    self.players.append(str_to_class(player_types[i])(Player_Colour(i)))
+                    #Line of Squares owned by Player i.
+                    self.boards.append([Square(0,self.players[-1].colour),Square(1,self.players[-1].colour),Square(2,self.players[-1].colour),Square(3,self.players[-1].colour)])
+            except AttributeError as e:
+                print("\nError: The class name given does not exist inside intrigue.py")
+                exit()
+            except Exception as e:
+                print("\nError:",e.args[0])
+                print("Please indicate four player types by writing four type names separated by spaces.")
+                exit()
+            print("I've finished creating stuff.")
+        #print(self)
+
+    def get_current_player(self) -> int:
+        """Returns the player whose turn it is."""
+        return self.player_counter
+
+    def next_state(self, state, play):
+        """Applies the play to the state, returning the new state."""
+        #game = Game
+        pass
+
+    def advance_player_turn(self):
+        """Advances the player turn counter."""
+        self.player_counter = (self.player_counter+1) % PLAYER_COUNT
         
     def play_game(self):
         """
@@ -100,19 +121,11 @@ class Game():
     def __repr__(self):
         return self.__str__()
 
-def run():
-    player_types = sys.argv
-    player_types.pop(0)
-
-    game = Game(player_types)
-    game.play_game()
-    #print("Running!")
-
 ############################################### Player Classes ###############################################
 
 class PlayerRandom(Player):
-    def __init__(self, colour:Player_Colour):
-        Player.__init__(self, colour)
+    def __init__(self, colour:Player_Colour, player:Player = None):
+        Player.__init__(self, colour, player)
 
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
         #Choose random player and square.
@@ -152,6 +165,9 @@ class PlayerRandom(Player):
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]):        
         #Randomly choose to replace or not.
         return choice(list(bribes.keys()))
+
+    def get_subclass_name(self):
+        return self.__class__
 
 # class PlayerHonest(Player):
 #     def __init__(self, colour:Player_Colour):
@@ -271,8 +287,8 @@ class PlayerRandom(Player):
 #         return self.get_max_bribe_application(bribes)
 
 class PlayerHuman(Player):
-    def __init__(self, colour:Player_Colour):
-        Player.__init__(self, colour)
+    def __init__(self, colour:Player_Colour, player:Player=None):
+        Player.__init__(self, colour, player)
 
     def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
         #Choose player, square and piece.
@@ -325,5 +341,21 @@ class PlayerHuman(Player):
         print("\nOut of the two applicants, choose one. Type the index of the piece:")
         chosen = list(bribes.keys())[int(input())]   #dict are ordered
         return chosen
+
+    def get_subclass_name(self):
+        return self.__class__
+
+def run():
+    player_types = sys.argv
+    player_types.pop(0)
+
+    game = Game(player_types)
+    game.play_game()
+    print("\nGame end!\n")
+    # game2 = Game(player_types, game.boards, game.players, game.player_counter)
+    # print("Running!")
+
+    # print(game)
+    # print(game2)
 
 run()
