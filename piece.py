@@ -2,13 +2,13 @@ from __future__ import annotations
 from intrigue_datatypes import Piece_Type
 
 class Piece:    
-    owner:player.Player
+    owner:player.Player_Colour
     type:Piece_Type
 
-    def __init__(self, player:player.Player, type:Piece_Type):
+    def __init__(self, player_colour:player.Player_Colour, type:Piece_Type):
         """Creates a piece for Player player of Type type."""
-        self.owner = player      #Piece's owner.
-        self.type = type     #Type of piece
+        self.owner = player_colour      #Piece's owner.
+        self.type = type                #Type of piece
 
     def copy(self) -> Piece:
         return Piece(self.owner, self.type)
@@ -28,6 +28,6 @@ class Piece:
     def __str__(self):
         return self.__repr__()#+" Earned: "+str(0)
     def __repr__(self):
-        return str(self.owner.colour.name) + " " +str(self.type.name)
+        return str(self.owner.name) + " " +str(self.type.name)
     
 import player

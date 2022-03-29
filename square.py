@@ -8,13 +8,13 @@ class Square:
     """Represents a square in a player board, having an inherent value and a piece."""
     value:int
     piece:Piece|None
-    owner:player.Player
+    owner:player.Player_Colour
 
-    def __init__(self, index:int, owner:player.Player):
+    def __init__(self, index:int, owner_colour:player.Player_Colour):
         """Creates a square of a given index (of the four available)."""         
         self.value = INDEX_VALUE_DICT[index]
         self.piece = None
-        self.owner = owner
+        self.owner = owner_colour
 
     
     def copy(self) -> Square:

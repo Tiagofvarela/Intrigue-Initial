@@ -1,14 +1,14 @@
 from __future__ import annotations
 from piece import Piece
-from intrigue_datatypes import Piece_Type, Player_Colour, STARTING_MONEY
+from intrigue_datatypes import MINIMUM_BRIBE, Piece_Type, Player_Colour, STARTING_MONEY
 from square import Square
 import abc
 
-Application = tuple[Piece,Square]
+Application = tuple[Piece,Square,int]
 Gameboard = list[list[Square]]
 
 def copy_application(application:Application) -> Application:
-    return (application[0].copy(),application[1].copy())
+    return (application[0].copy(),application[1].copy(),application[2])
 def copy_gameboard(board:Gameboard) -> Gameboard:
     copy:list[list[Square]] = []
     for palace in board:
@@ -26,9 +26,8 @@ class Player():
     pieces:list[Piece]
     money:int
     colour:Player_Colour
-    palace_applicants:list[Application]     #List of current applications.
-    #TODO: Eliminate unecessary logs after creating main game log.
-    history_applications:list[tuple[Application,Player]]  #List of previous applications.
+    palace_applicants:list[Application]                         #List of current applications.
+    #opinionModel:dict[Player_Colour,dict[Player_Colour,int]]    #Dict of Player_Colour:{Player_Colour:(myOpinion,opinionOfMe)}
     
     def __init__(self, colour:Player_Colour, copy:Player = None):
         """Creates a new player with their colour, money, pieces and palace."""
@@ -36,31 +35,40 @@ class Player():
             """Generates 8 pieces, two of each type, returned as a list."""
             pieces:list[Piece] = []
             def generate_two_pieces(piece_type:Piece_Type) -> list[Piece]:
-                return [Piece(self, piece_type), Piece(self, piece_type)]
+                return [Piece(self.colour, piece_type), Piece(self.colour, piece_type)]
             pieces += generate_two_pieces(Piece_Type.SCIENTIST)
             pieces += generate_two_pieces(Piece_Type.DOCTOR)
             pieces += generate_two_pieces(Piece_Type.PRIEST)
             pieces += generate_two_pieces(Piece_Type.CLERK)
             return pieces
+        # def generate_opinion_model() -> dict[Player_Colour,dict[Player_Colour,int]]:
+        #     """Generates an opinion model, which models RED, BLUE, GREEN, YELLOW's opinions of others.\n
+        #     model[Player][Target] = Player's opinion of Target"""
+        #     model:dict[Player_Colour,dict[Player_Colour,int]] = {}
+        #     for i in range(0,4):
+        #         model[Player_Colour(i)] = {}
+        #         for j in range(0,4):
+        #             model[Player_Colour(i)][Player_Colour(j)] = 0
+        #     return model
         
         #This instance should be a copy of the above player.
         if copy:
-            self.pieces = []
-            for piece in copy.pieces:
-                self.pieces += [Piece(self,piece.type)]
             self.money = copy.money
             self.colour = copy.colour
+            self.pieces = []
+            for piece in copy.pieces:
+                self.pieces += [Piece(self.colour,piece.type)]
             self.palace_applicants = []
-            for app_piece,app_square in copy.palace_applicants:
-                self.palace_applicants += [(app_piece.copy(), app_square.copy())]
+            for app_piece,app_square,bribe in copy.palace_applicants:
+                self.palace_applicants += [(app_piece.copy(), app_square.copy(), bribe)]
             return
                 
 
-        self.pieces = generate_initial_pieces()
         self.money = STARTING_MONEY
         self.colour = colour
+        self.pieces = generate_initial_pieces()
         self.palace_applicants = []     #List of current applications.
-        self.history_applications = []  #List of previous applications.
+        #self.opinionModel = generate_opinion_model()
 
     def collect_earnings(self, board:Gameboard) -> list[Square]:
         """Player sweeps through each square and collects their earnings.
@@ -73,7 +81,7 @@ class Player():
                     square = board[i][j]
                     if square.piece and square.piece.owner == self:
                         self.money += square.value
-                        print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.colour.name+"'s palace.")
+                        print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.name+"'s palace.")
                         collected_salaries.append(square.copy())
         return collected_salaries
 
@@ -91,8 +99,12 @@ class Player():
     @abc.abstractmethod
     def resolve_internal_conflict(self, board:Gameboard, players:list[Player], board_square:Square, bribes:dict[Application,int]) -> Application:
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
+    # @abc.abstractmethod
+    # def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
+    #     """Decide bribe to give to player so they accept the application. 
+    #     \nAmount is subtracted from account."""
     @abc.abstractmethod
-    def decide_bribe(self, application:Application, previous_bribes:dict[Application,int]) -> int:
+    def decide_bribe(self, piece:Piece, square:Square) -> int:
         """Decide bribe to give to player so they accept the application. 
         \nAmount is subtracted from account."""
     ###################
@@ -136,8 +148,10 @@ class Player():
                 for application in self.palace_applicants.copy():
                     #Chooses which of the two pieces to keep.
                     if board_square.piece.type == application[0].type:
-                        internal_bribes = self.collect_bribes([application,(board_square.piece,board_square)])
+                        internal_bribes = self.collect_bribes([application,(board_square.piece,board_square, MINIMUM_BRIBE)])
+                        #TODO: Figure out solution to asking players for a bribe.
                         chosen_application = self.resolve_internal_conflict(board, players, board_square, internal_bribes)
+                        #random_app = PlayerRandom.resolve_internal_conflict(board, players, board_square, internal_bribes)
                         #Log placement
                         print(self.colour.name+" chose "+str(chosen_application[0])+" out of "+str(board_square.piece)+" and "+str(application[0]))
                         conflicts_log.append( (internal_bribes,copy_application(chosen_application)) )
@@ -169,10 +183,10 @@ class Player():
         previous_bribes:dict[Application,int] = {application:-1 for application in applications}
         #Ask for bribe from each player.
         for application in applications:
-            bribe = application[0].owner.decide_bribe(application, previous_bribes)
-            self.money += bribe
-            print(application[0].owner.colour.name+" has paid "+str(bribe*1000)+" for "+str(application))
-            previous_bribes[application] = bribe
+            #bribe:int = application[0].owner.decide_bribe(application, previous_bribes)
+            self.money += application[2]
+            print(application[0].owner.name+" has paid "+str(application[2]*1000)+" for "+str(application))
+            previous_bribes[application] = application[2]
         return previous_bribes    
 
     def get_max_value_unoccupied_squares(self, board:Gameboard):
@@ -222,7 +236,7 @@ class Player():
     def applicants_string(self) -> str:
         """Returns a string representing the applicants."""
         string = ""
-        for piece,square in self.palace_applicants:
+        for piece,square,bribe in self.palace_applicants:
             string += str(piece)+"; "
         return string
 

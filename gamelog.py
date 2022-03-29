@@ -43,7 +43,7 @@ class GameLog():
         \n  -Times Player player is chosen or 0 if no player is given.
         \n  -Times Player player is not chosen or 0 if no player is given."""
         total = len(conflicts)
-        wins = len([conflict for conflict in conflicts if conflict[1][0].owner.colour == player]) if player else 0
+        wins = len([conflict for conflict in conflicts if conflict[1][0].owner == player]) if player else 0
         return total, wins, (total-wins if player else 0)
 
 
