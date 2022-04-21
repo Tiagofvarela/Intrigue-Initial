@@ -1,17 +1,12 @@
 from __future__ import annotations
 from intrigue_datatypes import Player_Colour
-from player import Application, Gameboard, Player
+from player import Application, Gameboard, Player, EarningsLog, ConflictLog, PlacementLog, ApplicationLog
 from square import Square
 
 #List of rounds.
 #Each Round:
     #Actions taken that round. (RED,GREEN,BLUE,YELLOW)
     #Game state end of round.
-
-EarningsLog = list[Square]
-ApplicationLog = list[tuple[Application, Player]]
-ConflictLog = list[tuple[dict[Application, int], Application]]
-PlacementLog = list[tuple[Application, int, Square]]
 
 class GameLog():
     #Given player number, get corresponding player's log.
@@ -89,5 +84,3 @@ def join_into_single_log(logs):
         list_of_lists = logs
     #Turns list of lists into flat list.
     return [element for list in list_of_lists for element in list]
-
-import square,intrigue

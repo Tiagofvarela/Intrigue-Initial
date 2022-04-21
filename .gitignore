@@ -2,3 +2,5 @@
 .vscode/settings.json
 mypy.ini
 *.zip
+player copy.py
+intrigue copy.py

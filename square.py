@@ -17,16 +17,28 @@ class Square:
         self.owner = owner_colour
 
     
-    def copy(self) -> Square:
-        piece:Piece|None
-        if self.piece:
-            piece = self.piece.copy()
-        else:
-            piece = None
-        square = Square(VALUE_INDEX_DICT[self.value], self.owner)
-        square.piece = piece
-        return square
+    # def copy(self) -> Square:
+    #     piece:Piece|None
+    #     if self.piece:
+    #         piece = self.piece.copy()
+    #     else:
+    #         piece = None
+    #     square = Square(VALUE_INDEX_DICT[self.value], self.owner)
+    #     square.piece = piece
+    #     return square
+
+    def get_index(self) -> tuple[int,int]:
+        return self.owner.value,VALUE_INDEX_DICT[self.value]
     
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Square):
+            return self.value == other.value and self.owner == other.owner and self.piece == other.piece
+        return False
+    def __lt__(self, other):
+        if isinstance(other, Square):
+            return self.value < other.value
+    def __hash__(self):
+        return hash((self.value, self.piece, self.owner))
     def __str__(self):
         return "|"+str(self.piece)+"|"
     def __repr__(self):
