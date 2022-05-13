@@ -41,8 +41,8 @@ class Game():
         player = self.players[self.get_player_turn()]
         plays:list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]] = []
 
-        earnings_log:EarningsLog = []#player.collect_earnings(self.boards)
-        conflict_logs:list[ConflictLog] = player.get_valid_resolutions2(self.boards)
+        earnings_log:EarningsLog = player.collect_earnings(self.boards)
+        conflict_logs:list[ConflictLog] = player.get_valid_resolutions(self.boards)
         for conflict_log in conflict_logs:
             placement_logs = player.get_valid_placements(self.boards, conflict_log)
             for placement_log in placement_logs:
@@ -70,13 +70,31 @@ class Game():
                 #No applications.
                 else:
                     plays.append( (earnings_log, [], [], []) )
-        
+
+
+        def uniq(lst):
+            last = object()
+            for item in lst:
+                if item == last:
+                    continue
+                yield item
+                last = item
+        def sort_and_deduplicate(l):
+            return list(uniq(sorted(l, reverse=True)))
+        return sort_and_deduplicate(plays)
         clean_plays = []
         for play in plays:
             if play not in clean_plays:
                 clean_plays.append(play)
             
         return clean_plays
+
+    def get_random_legal_move(self) -> tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]:
+        """Generates a random legal move and returns it. Only one move is generated."""
+        player = self.players[self.get_player_turn()]
+        board = self.boards
+        conflict_log = player.get_random_valid_resolution(self.boards)
+        return (player.collect_earnings(board), conflict_log, player.get_random_valid_placement(board,conflict_log), player.get_random_valid_application(board))
 
     def get_next_state(self, play:tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog], debug=False) -> Game:
         """Applies the play to create a new state, which is returned. \n Current state is not modified."""

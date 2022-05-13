@@ -6,7 +6,7 @@
 import sys
 
 from intrigue import Game
-from player import ApplicationLog, ConflictLog, PlacementLog, EarningsLog
+from player import ApplicationLog, ConflictLog, PlacementLog, EarningsLog, Player
 
 GameMove = tuple[EarningsLog, ConflictLog, PlacementLog, ApplicationLog]
 
@@ -34,6 +34,10 @@ class Board(object):
         and returns the full list of moves that are legal plays for the current player."""
         plays = state_history[-1].get_legal_moves()
         return plays
+
+    def get_random_legal_play(self, state_history:list[Game]) -> GameMove:
+        play:GameMove = state_history[-1].get_random_legal_move()
+        return play
 
     def winner(self, state_history:list[Game]):
         """Takes a sequence of game states representing the full game history.  

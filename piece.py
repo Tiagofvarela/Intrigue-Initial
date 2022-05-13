@@ -14,17 +14,19 @@ class Piece:
     #     return Piece(self.owner, self.type)
 
     def __eq__(self, other) -> bool:
-        """Checks type and owner, making for a unique piece (with a clone)."""
+        """Checks type and owner."""
         if isinstance(other, Piece):
             return self.type == other.type and self.owner == other.owner
         return False
     
     def __lt__(self, other):
+        """Compares the sum of the type and owner values."""
         if isinstance(other, Piece):
-            return (self.type.value+self.owner.value) < (other.type.value+self.owner.value)
+            return (self.type.value+self.owner.value) < (other.type.value+other.owner.value)
 
     def __hash__(self):
-        return hash((self.type, self.owner))
+        """If two objects are considered equal, then their hash is equal."""
+        return self.type.value*31**1+self.owner.value*31**2
 
     def __str__(self):
         return self.__repr__()#+" Earned: "+str(0)

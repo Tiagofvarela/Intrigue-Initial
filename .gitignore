@@ -4,3 +4,4 @@ mypy.ini
 *.zip
 player copy.py
 intrigue copy.py
+search-log.txt

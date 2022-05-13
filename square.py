@@ -31,14 +31,25 @@ class Square:
         return self.owner.value,VALUE_INDEX_DICT[self.value]
     
     def __eq__(self, other: object) -> bool:
+        """Checks the square value, owner, and piece."""
         if isinstance(other, Square):
             return self.value == other.value and self.owner == other.owner and self.piece == other.piece
         return False
     def __lt__(self, other):
+        """Order isn't based just on value, but also on owner and piece."""
         if isinstance(other, Square):
-            return self.value < other.value
+            self_piece_value = 0 
+            other_piece_value = 0
+            if self.piece:
+                self_piece_value = self.piece.type.value
+            if other.piece:
+                other_piece_value = other.piece.type.value
+            return (self.value+self.owner.value+self_piece_value) < (other.value+other.owner.value+other_piece_value)
     def __hash__(self):
-        return hash((self.value, self.piece, self.owner))
+        piece_hash = -17
+        if self.piece:
+            piece_hash = hash(self.piece)
+        return self.value*31**1 + self.owner.value*32**2 + piece_hash*31**3
     def __str__(self):
         return "|"+str(self.piece)+"|"
     def __repr__(self):

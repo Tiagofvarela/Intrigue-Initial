@@ -1,11 +1,14 @@
 import copy
+import time
 from tkinter.messagebox import NO
 import unittest
+from board import Board
 
 from intrigue import Game
 from intrigue_datatypes import Piece_Type, Player_Colour
+from monteCarlo import MonteCarlo
 from piece import Piece
-from player import ApplicationLog, ConflictLog, EarningsLog, PlacementLog, Player#, Application, ConflictLog, Player, app_get_piece, conflict_log_get_val, hash_ConflictLog, sort_ConflictLog
+from player import ApplicationLog, ConflictLog, EarningsLog, PlacementLog, Player, recursive_hash_object#, Application, ConflictLog, Player, app_get_piece, conflict_log_get_val, hash_ConflictLog, sort_ConflictLog
 from square import Square
 
 
@@ -13,7 +16,6 @@ def set_piece(player, index, square):
     "Sets the piece at the given index in the given square."
     square.piece = player.pieces[index]
     player.pieces.remove(player.pieces[index])
-
 
 class TestPlayer(unittest.TestCase):
 
@@ -30,6 +32,9 @@ class TestPlayer(unittest.TestCase):
 
         initial_money = yellow.money
         squares = yellow.collect_earnings(game.boards)
+
+        for square in squares:
+            yellow.money += square.value
 
         self.assertEqual(yellow.money, initial_money+13, "Should be 45 after collecting.")
 
@@ -215,14 +220,14 @@ class TestPlayer(unittest.TestCase):
         a2 = (blue.pieces[0], green_squares[0], 0)
         a3 = (blue.pieces[0], yellow_squares[0], 0)
         a4 = (blue.pieces[1], red_squares[2], 0)
-        a5 = (blue.pieces[1], green_squares[2], 0)
+        # a5 = (blue.pieces[1], green_squares[2], 0)  #INVALID
         a6 = (blue.pieces[1], yellow_squares[2], 0)
 
         #Order of combination is irrelevant.
         valid_combinations = [
-            (a1,a4),(a1,a5),(a1,a6),
-            (a2,a4),(a2,a5),(a2,a6),
-            (a3,a4),(a3,a5),(a3,a6)
+            (a1,a4),(a1,a6),
+            (a2,a4),(a2,a6),
+            (a3,a4),(a3,a6)
             ]
         valid_combinations2 = [(e2,e1) for e1, e2 in valid_combinations]
 
@@ -235,225 +240,537 @@ class TestPlayer(unittest.TestCase):
 
             self.assertIn( (app1_0, app2_0), valid_combinations+valid_combinations2)
 
-    # def test_get_valid_placements(self):
-    #     game = Game()
-    #     red,green,blue,yellow = game.players
-    #     red_squares,green_squares,blue_squares,yellow_squares = game.boards
+    def test_get_random_valid_application(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
 
-    #     red_squares[0].piece = None
-    #     red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
-    #     red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
-    #     red_squares[3].piece = None  
+        #No valid moves
+        for square in red_squares:
+            set_piece(green, len(green.pieces)-1, square)
+            green.pieces.pop()
+        for square in green_squares:
+            set_piece(blue, len(blue.pieces)-1, square)
+            blue.pieces.pop()
+        for square in blue_squares:
+            set_piece(yellow, len(yellow.pieces)-1, square)
+            yellow.pieces.pop()
+        for square in yellow_squares:
+            set_piece(red, len(red.pieces)-1, square)
+            red.pieces.pop()
 
-    #     #Internal
-    #     a1 = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
-    #     # External then Internal BUG: For now, these are lost.
-    #     # a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
-    #     # a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
-    #     #External 3
-    #     a4 = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
-    #     a5 = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
-    #     #Independent
-    #     a6 = (Piece(Player_Colour.YELLOW, Piece_Type.SCIENTIST), red_squares[3], 0)
+        red_squares[0].piece = None
+        green_squares[0].piece = None
+        blue_squares[0].piece = None
+        yellow_squares[0].piece = None
 
-    #     #Jumbled
-    #     red.palace_applicants.append( a5 )
-    #     red.palace_applicants.append( a1 )
-    #     # red.palace_applicants.append( a2 )
-    #     red.palace_applicants.append( a4 )
-    #     red.palace_applicants.append( a6 )
-    #     # red.palace_applicants.append( a3 )
+        #Combination of multiple valid moves.
 
-    #     conflict_log:list[ConflictLog] = [
-    #         [([a1,(red_squares[1].piece, red_squares[1], 0)],a1),
-    #         ([a4,a5],a4)],
-    #         [([a1,(red_squares[1].piece, red_squares[1], 0)],(red_squares[1].piece, red_squares[1], 0)),
-    #         ([a4,a5],a4)]
-    #     ]
-    #     conflict_log_practical = red.get_valid_resolutions2(game.boards)
+        # |None||GREEN Priest|  |GREEN Doctor|  |GREEN Scientist|   RED 
+        # |None||BLUE Priest|   |BLUE Doctor|   |BLUE Scientist|    GREEN 
+        # |None||YELLOW Priest| |YELLOW Doctor| |YELLOW Scientist|  BLUE 
+        # |None||RED Priest|    |RED Doctor|    |RED Scientist|     YELLOW 
+        # print(game.boards)
 
-
-    #     found_placement_log = red.get_valid_placements(game.boards, conflict_log[0])
-    #     valid_placements:list[PlacementLog] = [
-    #         [(a1,red_squares[1]),(a4,red_squares[3]),(a6,red_squares[1])],
-    #         [(a1,red_squares[1]),(a4,red_squares[1]),(a6,red_squares[3])]
-    #     ]
-    #     self.assertTrue(len(found_placement_log) == len(valid_placements))
-    #     for placement in found_placement_log:
-    #         self.assertIn(placement, valid_placements)
-
-    # def test_get_valid_resolutions(self):
-    #     game = Game()
-    #     red,green,blue,yellow = game.players
-    #     red_squares,green_squares,blue_squares,yellow_squares = game.boards
-
-    #     red_squares[0].piece = None
-    #     red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
-    #     red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
-    #     red_squares[3].piece = None
-
-    #     #Internal
-    #     a1 = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
-    #     #External then Internal
-    #     a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
-    #     a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
-    #     #External 3
-    #     a4 = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
-    #     a5 = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
-    #     a6 = (Piece(Player_Colour.YELLOW, Piece_Type.PRIEST), red_squares[3], 0)
-
-    #     #Jumbled
-    #     red.palace_applicants.append( a5 )
-    #     red.palace_applicants.append( a1 )
-    #     red.palace_applicants.append( a2 )
-    #     red.palace_applicants.append( a4 )
-    #     red.palace_applicants.append( a6 )
-    #     red.palace_applicants.append( a3 )
-
-    #     #Possible Resolutions
-    #     internal_app = (red_squares[1].piece, red_squares[1], 0)
-    #     res1_1 = [a1, internal_app ], a1
-    #     res1_2 = [a1, internal_app ], internal_app
-
-    #     res2_1 = [a2,a3],a2
-    #     internal_app = (red_squares[2].piece, red_squares[2], 0)
-    #     res2_1_1 = [a2, internal_app], a2
-    #     res2_1_2 = [a2, internal_app], internal_app
-
-    #     res2_2 = [a2,a3],a3
-    #     res2_2_1 = [a3, internal_app], a3
-    #     res2_2_2 = [a3, internal_app], internal_app
-
-    #     res3_1 = [a4,a5,a6], a4
-    #     res3_2 = [a4,a5,a6], a5
-    #     res3_3 = [a4,a5,a6], a6
-
-    #     valid_combinations = [
-    #         #RES1_1
-    #         #res2-1
-    #         [res1_1,res2_1,res2_1_1,res3_1],
-    #         [res1_1,res2_1,res2_1_1,res3_2],
-    #         [res1_1,res2_1,res2_1_1,res3_3],
-    #         #res2-1-2
-    #         [res1_1,res2_1,res2_1_2,res3_1],
-    #         [res1_1,res2_1,res2_1_2,res3_2],
-    #         [res1_1,res2_1,res2_1_2,res3_3],
-    #         #res2-2
-    #         [res1_1,res2_2,res2_2_1,res3_1],
-    #         [res1_1,res2_2,res2_2_1,res3_2],
-    #         [res1_1,res2_2,res2_2_1,res3_3],
-    #         #res2-2-2
-    #         [res1_1,res2_2,res2_2_2,res3_1],
-    #         [res1_1,res2_2,res2_2_2,res3_2],
-    #         [res1_1,res2_2,res2_2_2,res3_3],
-
-    #         #RES1_2
-    #         #res2-1
-    #         [res1_2,res2_1,res2_1_1,res3_1],
-    #         [res1_2,res2_1,res2_1_1,res3_2],
-    #         [res1_2,res2_1,res2_1_1,res3_3],
-    #         #res2-1-2
-    #         [res1_2,res2_1,res2_1_2,res3_1],
-    #         [res1_2,res2_1,res2_1_2,res3_2],
-    #         [res1_2,res2_1,res2_1_2,res3_3],
-    #         #res2-2
-    #         [res1_2,res2_2,res2_2_1,res3_1],
-    #         [res1_2,res2_2,res2_2_1,res3_2],
-    #         [res1_2,res2_2,res2_2_1,res3_3],
-    #         #res2-2-2
-    #         [res1_2,res2_2,res2_2_2,res3_1],
-    #         [res1_2,res2_2,res2_2_2,res3_2],
-    #         [res1_2,res2_2,res2_2_2,res3_3],
-    #     ]
-
-    #     middle_combinations = [
-    #         #RES1_1
-    #         #res2-1
-    #         [res1_1,res2_1,res3_1],
-    #         [res1_1,res2_1,res3_2],
-    #         [res1_1,res2_1,res3_3],
-    #         #res2-2
-    #         [res1_1,res2_2,res3_1],
-    #         [res1_1,res2_2,res3_2],
-    #         [res1_1,res2_2,res3_3],
-
-    #         #RES1_2
-    #         #res2-1
-    #         [res1_2,res2_1,res3_1],
-    #         [res1_2,res2_1,res3_2],
-    #         [res1_2,res2_1,res3_3],
-    #         #res2-2
-    #         [res1_2,res2_2,res3_1],
-    #         [res1_2,res2_2,res3_2],
-    #         [res1_2,res2_2,res3_3],
-
-    #     ]
-
-    #     simple_combinations = [
-    #         [res2_1,res3_1],
-    #         [res2_1,res3_2],
-    #         [res2_1,res3_3],
-
-    #         [res2_2,res3_1],
-    #         [res2_2,res3_2],
-    #         [res2_2,res3_3]
-    #     ]
-
-
-    #     found_combinations = red.get_valid_resolutions2(game.boards)
-
-    #     #First Element: res2_1, res3_2
-    #     # print_application_list(found_combinations[0])
-    #     #BUG: List with one green doctor, from which a green doctor is selected.
-
-    #     # self.assertEqual( len(found_combinations), len(simple_combinations) )
-    #     # for comb in found_combinations:
-    #     #     self.assertIn(comb, simple_combinations)
-    #     new_middle_combinations:list = []
-    #     new_found_combinations:list = []
-    #     # new_middle_combinations = sorted(middle_combinations, key=conflict_log_get_val)
-    #     # new_found_combinations = sorted(found_combinations, key=conflict_log_get_val)
-    #     for i in range(len(middle_combinations)):
-    #         new_middle_combinations.append(hash_ConflictLog(middle_combinations[i]))
-    #         new_found_combinations.append(hash_ConflictLog(found_combinations[i]))
-    #     # for i in range(len(middle_combinations)):
-    #     #     new_middle_combinations.append(sort_ConflictLog(middle_combinations[0]))
-    #     #     new_found_combinations.append(sort_ConflictLog(found_combinations[0]))
-
-    #     # print("\n")
-    #     # print(new_middle_combinations[0][1])
-    #     # print(sorted(new_middle_combinations[0][1]))
-    #     # print("\n")
-    #     # print(new_found_combinations[0][1])
-    #     # print(sorted(new_found_combinations[0][1]) )
-    #     # print("\n")
+        blue.pieces = [Piece(Player_Colour.BLUE, Piece_Type.CLERK), Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)]
         
-    #     # self.assertEqual(new_middle_combinations, new_found_combinations)
-    #     # print("\n")
-    #     # for i in range(len(middle_combinations)):
-    #     #     print(new_middle_combinations[i])
-    #     #     print(new_found_combinations[i])
-    #     #     print("\n")
-    #     self.assertEqual( len(new_found_combinations), len(new_middle_combinations) )
-    #     for comb in new_found_combinations:
-    #         for el in comb:
-    #             self.assertIn(el, new_middle_combinations[0])
-    #         self.assertIn(comb, new_middle_combinations)
+        a1 = (blue.pieces[0], red_squares[0], 0)
+        a2 = (blue.pieces[0], green_squares[0], 0)
+        a3 = (blue.pieces[0], yellow_squares[0], 0)
+        a4 = (blue.pieces[1], red_squares[2], 0)
+        #a5 = (blue.pieces[1], green_squares[2], 0) #INVALID
+        a6 = (blue.pieces[1], yellow_squares[2], 0)
 
-    #     self.assertEqual( len(found_combinations), len(middle_combinations) )
-    #     for comb in found_combinations:
-    #         for el in comb:
-    #             self.assertIn(el, middle_combinations[0])
-    #         self.assertIn(comb, middle_combinations)
+        #Order of combination is irrelevant.
+        valid_combinations:ApplicationLog = [
+            (a1,a4),(a1,a6),
+            (a2,a4),(a2,a6),
+            (a3,a4),(a3,a6)
+            ]
+        valid_combinations2 = [(e2,e1) for e1, e2 in valid_combinations]
+
+        # found_combinations = blue.get_valid_applications(game.boards)
+        # self.assertTrue(len(found_combinations) == len(valid_combinations))
+        # for app1, app2 in found_combinations:
+        #     #Bribe value is irrelevant for check.
+        #     app1_0 = (app1[0], app1[1], 0) 
+        #     app2_0 = (app2[0], app2[1], 0) 
+
+        #     self.assertIn( (app1_0, app2_0), valid_combinations+valid_combinations2)
+
+
+        hashed_expected_combinations = []
+        hashed_found_combinations = set()
+        for comb in valid_combinations:
+            hashed_expected_combinations.append(recursive_hash_object(comb))
+            
+        expected_found = set()
+        
+        i = 0
+        while i < 10000:
+            found_combination = blue.get_random_valid_application(game.boards)
+
+            app1, app2 = found_combination
+            #Bribe value is irrelevant for check. Order applications.
+            if app1[1].piece:
+                app1_0 = (app2[0], app2[1], 0) 
+                app2_0 = (app1[0], app1[1], 0) 
+            else:
+                app1_0 = (app1[0], app1[1], 0) 
+                app2_0 = (app2[0], app2[1], 0) 
+            found_combination = (app1_0, app2_0)
+
+            #self.assertIn(found_combination, valid_combinations)
+            found_hash = recursive_hash_object(found_combination)
+            self.assertIn(found_hash, hashed_expected_combinations)
+            hashed_found_combinations.add(found_hash)
+            expected_found.add(found_combination)
+            if len(hashed_found_combinations) == len(hashed_expected_combinations):
+                break
+            i += 1
+        # print("Found: ")
+        # for el in expected_found:
+        #     print(el)
+        # print("Expected: ")
+        # for el in valid_combinations:
+        #     print(el)
+        self.assertEqual(sorted(hashed_expected_combinations), sorted(list(hashed_found_combinations)))
+
+    def test_get_valid_placements(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
+
+        red_squares[0].piece = None
+        red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
+        red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
+        red_squares[3].piece = None  
+
+        #Internal
+        green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+        # External then Internal BUG: For now, these are lost.
+        # a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
+        # a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+        #External 3
+        blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
+        green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+        #Independent
+        yellow_scientist_app = (Piece(Player_Colour.YELLOW, Piece_Type.SCIENTIST), red_squares[3], 0)
+
+        #Jumbled
+        red.palace_applicants.append( green_priest_app )
+        red.palace_applicants.append( green_doctor_app )
+        # red.palace_applicants.append( a2 )
+        red.palace_applicants.append( blue_priest_app )
+        red.palace_applicants.append( yellow_scientist_app )
+        # red.palace_applicants.append( a3 )
+
+        conflict_log:list[ConflictLog] = [
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],green_doctor_app),
+            ([blue_priest_app,green_priest_app],blue_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],(red_squares[1].piece, red_squares[1], 0)),
+            ([blue_priest_app,green_priest_app],blue_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],green_doctor_app),
+            ([blue_priest_app,green_priest_app],green_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],(red_squares[1].piece, red_squares[1], 0)),
+            ([blue_priest_app,green_priest_app],green_priest_app)]
+        ]
+        conflict_log_practical = red.get_valid_resolutions(game.boards)
+        found_placement_log = red.get_valid_placements(game.boards, conflict_log[0])
+
+        # RED Board:        |None||BLUE Doctor||GREEN Clerk||None| 
+        # Applicants:       GREEN Doctor, BLUE Priest, GREEN Priest, YELLOW Scientist
+        # Chosen Conflict Resolution: 
+        #   red_squares[1] ->   ([GREEN Doctor, internal BLUE Doctor], GREEN Doctor) 
+        #                       ([BLUE Priest, GREEN Priest], BLUE Priest)
+
+        expected_valid_placements:list[PlacementLog] = [
+            [(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[3]),(yellow_scientist_app,red_squares[0])],
+            [(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[0]),(yellow_scientist_app,red_squares[3])]
+        ]
+        # Valid placements:
+        # |YELLOW Scientist||GREEN Doctor||GREEN Clerk||BLUE Priest|
+        # |BLUE Priest||GREEN Doctor||GREEN Clerk||YELLOW Scientist|
+
+        
+        # recursive_hash_object([(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[0]),(yellow_scientist_app,red_squares[3])]),
+        # recursive_hash_object([(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[3]),(yellow_scientist_app,red_squares[0])]),
             
 
-    #     #Green Doctor, Blue Doctor ->Green Doctor   res1_1
-    #     #Green Priest, Blue Priest, Yellow Priest -> Green Priest   res3_2
-    #     #Blue Clerk, Yellow Clerk -> Blue Clerk res2_2
+        test_hashes = [
+            recursive_hash_object([(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[0]),(yellow_scientist_app,red_squares[3])]),
+            recursive_hash_object([(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[3]),(yellow_scientist_app,red_squares[0])]),
+            recursive_hash_object([(green_doctor_app,red_squares[1]),(yellow_scientist_app,red_squares[0]),(blue_priest_app,red_squares[3])]),
+            recursive_hash_object([(blue_priest_app,red_squares[3]),(green_doctor_app,red_squares[1]),(yellow_scientist_app,red_squares[0])]),
+            recursive_hash_object([(blue_priest_app,red_squares[3]),(yellow_scientist_app,red_squares[0]),(green_doctor_app,red_squares[1])]),
+            recursive_hash_object([(yellow_scientist_app,red_squares[0]),(blue_priest_app,red_squares[3]),(green_doctor_app,red_squares[1])]),
+            recursive_hash_object([(yellow_scientist_app,red_squares[0]),(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[3])])
+        ]
+        i = 1
+        while i < len(test_hashes):
+            self.assertNotEqual(test_hashes[0], test_hashes[i], ""+str(0)+" should be different from "+str(i))
+            self.assertEqual(test_hashes[1], test_hashes[i])
+            i += 1
 
-    #     # self.assertEqual( len(found_combinations), len(valid_combinations) )
-    #     # for comb in found_combinations:
-    #     #     self.assertIn(comb, valid_combinations)
+        self.assertTrue(len(found_placement_log) == len(expected_valid_placements))
+        self.assertEqual(recursive_hash_object(expected_valid_placements), recursive_hash_object(found_placement_log))
+        # for placement in found_placement_log:
+        #     self.assertIn(placement, expected_valid_placements)
+
+    def test_get_random_valid_placement(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
+
+        red_squares[0].piece = None
+        red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
+        red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
+        red_squares[3].piece = None  
+
+        #Internal
+        green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+        # External then Internal BUG: For now, these are lost.
+        # a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
+        # a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+        #External 3
+        blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
+        green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+        #Independent
+        yellow_scientist_app = (Piece(Player_Colour.YELLOW, Piece_Type.SCIENTIST), red_squares[3], 0)
+
+        #Jumbled
+        red.palace_applicants.append( green_priest_app )
+        red.palace_applicants.append( green_doctor_app )
+        # red.palace_applicants.append( a2 )
+        red.palace_applicants.append( blue_priest_app )
+        red.palace_applicants.append( yellow_scientist_app )
+        # red.palace_applicants.append( a3 )
+
+        conflict_log:list[ConflictLog] = [
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],green_doctor_app),
+            ([blue_priest_app,green_priest_app],blue_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],(red_squares[1].piece, red_squares[1], 0)),
+            ([blue_priest_app,green_priest_app],blue_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],green_doctor_app),
+            ([blue_priest_app,green_priest_app],green_priest_app)],
+            [([green_doctor_app,(red_squares[1].piece, red_squares[1], 0)],(red_squares[1].piece, red_squares[1], 0)),
+            ([blue_priest_app,green_priest_app],green_priest_app)]
+        ]
+
+        # RED Board:        |None||BLUE Doctor||GREEN Clerk||None| 
+        # Applicants:       GREEN Doctor, BLUE Priest, GREEN Priest, YELLOW Scientist
+        # Chosen Conflict Resolution: 
+        #   red_squares[1] ->   ([GREEN Doctor, internal BLUE Doctor], GREEN Doctor) 
+        #                       ([BLUE Priest, GREEN Priest], BLUE Priest)
+
+        expected_valid_placements:list[PlacementLog] = [
+            [(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[3]),(yellow_scientist_app,red_squares[0])],
+            [(green_doctor_app,red_squares[1]),(blue_priest_app,red_squares[0]),(yellow_scientist_app,red_squares[3])]
+        ]
+        # Valid placements:
+        # |YELLOW Scientist||GREEN Doctor||GREEN Clerk||BLUE Priest|
+        # |BLUE Priest||GREEN Doctor||GREEN Clerk||YELLOW Scientist|        
+        hashed_expected_placements = []
+        hashed_found_placements = set()
+        for placement in expected_valid_placements:
+            hashed_expected_placements.append(recursive_hash_object(placement))
+        
+        i = 0
+        while i < 10000:
+            found_placement_log = red.get_random_valid_placement(game.boards, conflict_log[0])
+
+            #self.assertIn(found_placement_log, expected_valid_placements)
+            found_hash = recursive_hash_object(found_placement_log)
+            self.assertIn(found_hash, hashed_expected_placements)
+            hashed_found_placements.add(found_hash)
+            if len(hashed_found_placements) == len(hashed_expected_placements):
+                break
+            i += 1
+        self.assertEqual(sorted(hashed_expected_placements), sorted(list(hashed_found_placements)))
+
+    def test_get_valid_resolutions(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
+
+        red_squares[0].piece = None
+        red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
+        red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
+        red_squares[3].piece = None
+
+        #Internal
+        green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+        #External then Internal
+        blue_clerk_app = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
+        yellow_clerk_app = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+        #External 3
+        blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
+        green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+        yellow_priest_app = (Piece(Player_Colour.YELLOW, Piece_Type.PRIEST), red_squares[3], 0)
+
+        #Jumbled
+        red.palace_applicants.append( green_priest_app )
+        red.palace_applicants.append( green_doctor_app )
+        red.palace_applicants.append( blue_clerk_app )
+        red.palace_applicants.append( blue_priest_app )
+        red.palace_applicants.append( yellow_priest_app )
+        red.palace_applicants.append( yellow_clerk_app )
+
+        #Possible Resolutions
+        internal_app = (red_squares[1].piece, red_squares[1], 0)    #Blue Doctor
+        res1_1 = [green_doctor_app, internal_app ], green_doctor_app
+        res1_2 = [green_doctor_app, internal_app ], internal_app
+
+        res2_1 = [blue_clerk_app,yellow_clerk_app],blue_clerk_app
+        internal_app = (red_squares[2].piece, red_squares[2], 0)    #Green Clerk
+        res2_1_1 = [blue_clerk_app, internal_app], blue_clerk_app
+        res2_1_2 = [blue_clerk_app, internal_app], internal_app
+
+        res2_2 = [blue_clerk_app,yellow_clerk_app],yellow_clerk_app
+        res2_2_1 = [yellow_clerk_app, internal_app], yellow_clerk_app
+        res2_2_2 = [yellow_clerk_app, internal_app], internal_app
+
+        res3_1 = [blue_priest_app,green_priest_app,yellow_priest_app], blue_priest_app
+        res3_2 = [blue_priest_app,green_priest_app,yellow_priest_app], green_priest_app
+        res3_3 = [blue_priest_app,green_priest_app,yellow_priest_app], yellow_priest_app
+
+        valid_combinations = [
+            #RES1_1
+            #res2-1
+            [res1_1,res2_1,res2_1_1,res3_1],
+            [res1_1,res2_1,res2_1_1,res3_2],
+            [res1_1,res2_1,res2_1_1,res3_3],
+            #res2-1-2
+            [res1_1,res2_1,res2_1_2,res3_1],
+            [res1_1,res2_1,res2_1_2,res3_2],
+            [res1_1,res2_1,res2_1_2,res3_3],
+            #res2-2
+            [res1_1,res2_2,res2_2_1,res3_1],
+            [res1_1,res2_2,res2_2_1,res3_2],
+            [res1_1,res2_2,res2_2_1,res3_3],
+            #res2-2-2
+            [res1_1,res2_2,res2_2_2,res3_1],
+            [res1_1,res2_2,res2_2_2,res3_2],
+            [res1_1,res2_2,res2_2_2,res3_3],
+
+            #RES1_2
+            #res2-1
+            [res1_2,res2_1,res2_1_1,res3_1],
+            [res1_2,res2_1,res2_1_1,res3_2],
+            [res1_2,res2_1,res2_1_1,res3_3],
+            #res2-1-2
+            [res1_2,res2_1,res2_1_2,res3_1],
+            [res1_2,res2_1,res2_1_2,res3_2],
+            [res1_2,res2_1,res2_1_2,res3_3],
+            #res2-2
+            [res1_2,res2_2,res2_2_1,res3_1],
+            [res1_2,res2_2,res2_2_1,res3_2],
+            [res1_2,res2_2,res2_2_1,res3_3],
+            #res2-2-2
+            [res1_2,res2_2,res2_2_2,res3_1],
+            [res1_2,res2_2,res2_2_2,res3_2],
+            [res1_2,res2_2,res2_2_2,res3_3],
+        ]
+
+        middle_combinations = [
+            #RES1_1
+            #res2-1
+            [res1_1,res2_1,res3_1],
+            [res1_1,res2_1,res3_2],
+            [res1_1,res2_1,res3_3],
+            #res2-2
+            [res1_1,res2_2,res3_1],
+            [res1_1,res2_2,res3_2],
+            [res1_1,res2_2,res3_3],
+
+            #RES1_2
+            #res2-1
+            [res1_2,res2_1,res3_1],
+            [res1_2,res2_1,res3_2],
+            [res1_2,res2_1,res3_3],
+            #res2-2
+            [res1_2,res2_2,res3_1],
+            [res1_2,res2_2,res3_2],
+            [res1_2,res2_2,res3_3],
+
+        ]
+
+        simple_combinations = [
+            [res2_1,res3_1],
+            [res2_1,res3_2],
+            [res2_1,res3_3],
+
+            [res2_2,res3_1],
+            [res2_2,res3_2],
+            [res2_2,res3_3]
+        ]
+
+
+        found_combinations = red.get_valid_resolutions(game.boards)
+
+        #First Element: res2_1, res3_2
+        # print_application_list(found_combinations[0])
+        #BUG: List with one green doctor, from which a green doctor is selected.
+
+        # self.assertEqual( len(found_combinations), len(simple_combinations) )
+        # for comb in found_combinations:
+        #     self.assertIn(comb, simple_combinations)
+        hash_middle_combinations:list = []
+        hash_found_combinations:list = []
+        for i in range(len(middle_combinations)):
+            hash_middle_combinations.append(recursive_hash_object(middle_combinations[i]))
+            hash_found_combinations.append(recursive_hash_object(found_combinations[i]))
+
+        # print("\n")
+        # print(hash_middle_combinations)
+        # print(sorted(hash_middle_combinations))
+        # print("\n")
+        # print(hash_found_combinations)
+        # print(sorted(hash_found_combinations) )
+        # print("\n")
+
+        self.assertEqual( len(hash_found_combinations), len(hash_middle_combinations) )
+        for hash_el in hash_found_combinations:
+            self.assertIn(hash_el, hash_middle_combinations)            
+
+        # self.assertEqual( len(found_combinations), len(valid_combinations) )
+        # for comb in found_combinations:
+        #     self.assertIn(comb, valid_combinations)
+
+    def test_get_random_valid_resolutions(self):
+            game = Game()
+            red,green,blue,yellow = game.players
+            red_squares,green_squares,blue_squares,yellow_squares = game.boards
+
+            red_squares[0].piece = None
+            red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
+            red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
+            red_squares[3].piece = None
+
+            #Internal
+            green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+            #External then Internal
+            blue_clerk_app = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
+            yellow_clerk_app = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+            #External 3
+            blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
+            green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+            yellow_priest_app = (Piece(Player_Colour.YELLOW, Piece_Type.PRIEST), red_squares[3], 0)
+
+            #Jumbled
+            red.palace_applicants.append( green_priest_app )
+            red.palace_applicants.append( green_doctor_app )
+            red.palace_applicants.append( blue_clerk_app )
+            red.palace_applicants.append( blue_priest_app )
+            red.palace_applicants.append( yellow_priest_app )
+            red.palace_applicants.append( yellow_clerk_app )
+
+            #Possible Resolutions
+            internal_app = (red_squares[1].piece, red_squares[1], 0)    #Blue Doctor
+            res1_1 = [green_doctor_app, internal_app ], green_doctor_app
+            res1_2 = [green_doctor_app, internal_app ], internal_app
+
+            res2_1 = [blue_clerk_app,yellow_clerk_app],blue_clerk_app
+            internal_app = (red_squares[2].piece, red_squares[2], 0)    #Green Clerk
+            res2_1_1 = [blue_clerk_app, internal_app], blue_clerk_app
+            res2_1_2 = [blue_clerk_app, internal_app], internal_app
+
+            res2_2 = [blue_clerk_app,yellow_clerk_app],yellow_clerk_app
+            res2_2_1 = [yellow_clerk_app, internal_app], yellow_clerk_app
+            res2_2_2 = [yellow_clerk_app, internal_app], internal_app
+
+            res3_1 = [blue_priest_app,green_priest_app,yellow_priest_app], blue_priest_app
+            res3_2 = [blue_priest_app,green_priest_app,yellow_priest_app], green_priest_app
+            res3_3 = [blue_priest_app,green_priest_app,yellow_priest_app], yellow_priest_app
+
+            valid_combinations = [
+                #RES1_1
+                #res2-1
+                [res1_1,res2_1,res2_1_1,res3_1],
+                [res1_1,res2_1,res2_1_1,res3_2],
+                [res1_1,res2_1,res2_1_1,res3_3],
+                #res2-1-2
+                [res1_1,res2_1,res2_1_2,res3_1],
+                [res1_1,res2_1,res2_1_2,res3_2],
+                [res1_1,res2_1,res2_1_2,res3_3],
+                #res2-2
+                [res1_1,res2_2,res2_2_1,res3_1],
+                [res1_1,res2_2,res2_2_1,res3_2],
+                [res1_1,res2_2,res2_2_1,res3_3],
+                #res2-2-2
+                [res1_1,res2_2,res2_2_2,res3_1],
+                [res1_1,res2_2,res2_2_2,res3_2],
+                [res1_1,res2_2,res2_2_2,res3_3],
+
+                #RES1_2
+                #res2-1
+                [res1_2,res2_1,res2_1_1,res3_1],
+                [res1_2,res2_1,res2_1_1,res3_2],
+                [res1_2,res2_1,res2_1_1,res3_3],
+                #res2-1-2
+                [res1_2,res2_1,res2_1_2,res3_1],
+                [res1_2,res2_1,res2_1_2,res3_2],
+                [res1_2,res2_1,res2_1_2,res3_3],
+                #res2-2
+                [res1_2,res2_2,res2_2_1,res3_1],
+                [res1_2,res2_2,res2_2_1,res3_2],
+                [res1_2,res2_2,res2_2_1,res3_3],
+                #res2-2-2
+                [res1_2,res2_2,res2_2_2,res3_1],
+                [res1_2,res2_2,res2_2_2,res3_2],
+                [res1_2,res2_2,res2_2_2,res3_3],
+            ]
+
+            middle_combinations = [
+                #RES1_1
+                #res2-1
+                [res1_1,res2_1,res3_1],
+                [res1_1,res2_1,res3_2],
+                [res1_1,res2_1,res3_3],
+                #res2-2
+                [res1_1,res2_2,res3_1],
+                [res1_1,res2_2,res3_2],
+                [res1_1,res2_2,res3_3],
+
+                #RES1_2
+                #res2-1
+                [res1_2,res2_1,res3_1],
+                [res1_2,res2_1,res3_2],
+                [res1_2,res2_1,res3_3],
+                #res2-2
+                [res1_2,res2_2,res3_1],
+                [res1_2,res2_2,res3_2],
+                [res1_2,res2_2,res3_3],
+
+            ]
+
+            simple_combinations = [
+                [res2_1,res3_1],
+                [res2_1,res3_2],
+                [res2_1,res3_3],
+
+                [res2_2,res3_1],
+                [res2_2,res3_2],
+                [res2_2,res3_3]
+            ]   
+
+            hashed_expected_resolutions = []
+            hashed_found_resolutions = set()
+            for comb in valid_combinations:#middle_combinations:
+                hashed_expected_resolutions.append(recursive_hash_object(comb))
+            
+            i = 0
+            while i < 10000:
+                found_conflict_log = red.get_random_valid_resolution(game.boards)
+
+                #self.assertIn(found_conflict_log, middle_combinations)
+                found_hash = recursive_hash_object(found_conflict_log)
+                self.assertIn(found_hash, hashed_expected_resolutions)
+                hashed_found_resolutions.add(found_hash)
+                if len(hashed_found_resolutions) == len(hashed_expected_resolutions):
+                    break
+                i += 1
+            self.assertEqual(sorted(hashed_expected_resolutions), sorted(list(hashed_found_resolutions)))
 
 class TestGame(unittest.TestCase):
     def test_play_game(self):
@@ -553,6 +870,46 @@ class TestGame(unittest.TestCase):
         # found_applciations_logs = red.get_valid_applications(game.boards)
         # found_conflict_logs = red.get_valid_resolutions2(game.boards)
         # found_placement_logs = red.get_valid_placements(game.boards, conflict_log)
+
+    def test_run_simulation(self):
+        print()
+        #Set up game board.
+        board = Board()
+        #Parameters
+        args = {'time':1,'max_moves':120,'C':1.3}
+        #Set up montecarlo.
+        open('search-log.txt', 'w').close()
+        montecarlo = MonteCarlo(board, **args)
+        montecarlo.update(board.start())
+
+        ### One Simulation ###
+
+        print("Plays before: ",list(montecarlo.plays.values()))
+        print("Wins before: ",list(montecarlo.wins.values()))
+        tic = time.perf_counter()
+        #Play a simulation.
+        montecarlo.run_simulation()
+        toc = time.perf_counter()
+        print("Plays after: ",list(montecarlo.plays.values()))
+        print("Wins after: ",list(montecarlo.wins.values()))
+
+        taken_seconds = (toc - tic)
+        print("It has taken",taken_seconds,"seconds.")
+
+        ### Simulate and test Plays ###       
+        # print("Plays before: ",list(montecarlo.plays.values()))
+        # print("Wins before: ",list(montecarlo.wins.values()))
+
+        # while 2 not in set(montecarlo.plays.values()):
+        #     montecarlo.run_simulation()
+        #     # print(set(montecarlo.plays.values()))
+        
+        # print("Plays after: ",list(montecarlo.plays.values()))
+        # print("Wins after: ",list(montecarlo.wins.values()))
+
+        print()
+
+        
         
 
 if __name__ == '__main__':
