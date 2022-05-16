@@ -784,33 +784,37 @@ class TestGame(unittest.TestCase):
         red_squares[3].piece = None  
 
         #Internal
-        a1 = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+        a1 = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 1)
         # External then Internal BUG: For now, these are lost.
-        # a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
-        # a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+        a2 = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 2)
+        a3 = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 3)
         #External 3
-        a4 = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
-        a5 = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+        a4 = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 4)
+        a5 = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 5)
         #Independent
-        a6 = (Piece(Player_Colour.YELLOW, Piece_Type.SCIENTIST), red_squares[3], 0)
+        a6 = (Piece(Player_Colour.YELLOW, Piece_Type.SCIENTIST), red_squares[3], 6)
 
         #Jumbled
         red.palace_applicants.append( a5 )
         red.palace_applicants.append( a1 )
-        # red.palace_applicants.append( a2 )
+        red.palace_applicants.append( a2 )
         red.palace_applicants.append( a4 )
         red.palace_applicants.append( a6 )
-        # red.palace_applicants.append( a3 )
+        red.palace_applicants.append( a3 )
 
         set_piece(red,4,yellow_squares[2])
         earnings_log:EarningsLog = [yellow_squares[2]]
         applications_log:ApplicationLog = [(red.pieces[0], green_squares[0], 0), (red.pieces[-1], yellow_squares[0], 0)]
         conflict_log:ConflictLog = [
             ([a1,(red_squares[1].piece, red_squares[1], 0)],a1),
-            ([a4,a5],a4)
+            ([a4,a5],a4),
+            ([a2,a3],a2),   #Implementation doesn't actually care about intermediate conflicts. 
+            #TODO: Use this fact in implementation. Make external then-internal just a big internal.
+            #Example: ([a2,a3,(red_squares[2].piece, red_squares[2], 0)],a2)
+            ([a2,(red_squares[2].piece, red_squares[2], 0)],a2)
         ]
         placement_log:PlacementLog = [
-            (a1,red_squares[1]),(a4,red_squares[3]),(a6,red_squares[2])
+            (a1,red_squares[1]),(a4,red_squares[3]),(a6,red_squares[0]),(a2,red_squares[2])
         ]
         play = (earnings_log,conflict_log,placement_log,applications_log)
         new_game = game.get_next_state(play)
@@ -818,11 +822,15 @@ class TestGame(unittest.TestCase):
         #Earnings Log
         red.money += earnings_log[0].value
         #Conflict Log
+        for piece,square,bribe in red.palace_applicants:
+            red.money += bribe
+            game.players[piece.owner.value].money -= bribe
         red.palace_applicants = []
         #Placement Log
+        red_squares[0].piece = a6[0]
         red_squares[1].piece = a1[0]
+        red_squares[2].piece = a2[0]
         red_squares[3].piece = a4[0]
-        red_squares[2].piece = a6[0]
         #Application Log
         green.palace_applicants.append( applications_log[0] )
         red.pieces.remove(red.pieces[0])
@@ -875,7 +883,7 @@ class TestGame(unittest.TestCase):
         print()
         #Set up game board.
         board = Board()
-        #Parameters
+        #Parameters (not used in simulation)
         args = {'time':1,'max_moves':120,'C':1.3}
         #Set up montecarlo.
         open('search-log.txt', 'w').close()
