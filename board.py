@@ -1,7 +1,7 @@
 #Structural basis for this program by Jeff Bradberry. https://jeffbradberry.com/posts/2015/09/intro-to-monte-carlo-tree-search/
 
 #State: Represents boards, pieces, players and their money.
-#Player Number: 1,2,3,4
+#Player Number: 0,1,2,3
 
 import sys
 
@@ -16,12 +16,10 @@ class Board(object):
     def start(self):
         """Returns a representation of the starting state of the game."""
         game = Game()
-        # self.calls = 0
         return game
 
     def current_player(self, state:Game):
         """Takes the game state and returns the current player's number."""
-        # print(state)
         return state.get_player_turn()
 
     def next_state(self, state:Game, play:GameMove):
@@ -36,7 +34,9 @@ class Board(object):
         return plays
 
     def get_random_legal_play(self, state_history:list[Game]) -> GameMove:
-        play:GameMove = state_history[-1].get_random_legal_move()
+        """Takes a sequence of game states representing the full game history, 
+        and returns a random legal play for the current player."""
+        play = state_history[-1].get_random_legal_move()
         return play
 
     def winner(self, state_history:list[Game]):

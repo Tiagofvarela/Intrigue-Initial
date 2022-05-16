@@ -8,12 +8,12 @@ from random import choice
 import time
 from board import Board
 from intrigue import Game
-from intrigue_datatypes import Player_Colour
+from intrigue_datatypes import PLAYER_COUNT, Player_Colour
 from player import Player, recursive_hash_object
 
 
 class MonteCarlo(object):
-    def __init__(self, board, **kwargs):
+    def __init__(self, board, **kwargs):#TODO: Evaluation function parameter to evaluate a final state and attribute points.
         """Takes an instance of a Board and optionally some keyword arguments. 
         Initializes the list of game states and the statistics tables."""
         self.board:Board = board
@@ -37,7 +37,7 @@ class MonteCarlo(object):
         state = self.states[-1]
         player = self.board.current_player(state)
         legal = self.board.legal_plays(self.states[:])
-        print("Round:",state.turn_counter)
+        print("Round:"+str(state.turn_counter+1)+" "+Player_Colour(player).name+" Turn")
         print("Legal moves available:",len(legal))
 
         # Bail out early if there is no real choice to be made.
@@ -138,33 +138,3 @@ class MonteCarlo(object):
             # print(self.plays)
             if player == winner:
                 self.wins[recursive_hash_object((player, state))] += 1
-
-def run():
-    #Set up game board.
-    board = Board()
-    #Parameters
-    args = {'time':1,'max_moves':120,'C':1.3}
-    #Set up montecarlo.
-    open('search-log.txt', 'w').close()
-    montecarlo = MonteCarlo(board, **args)
-    montecarlo.update(board.start())
-
-    tic = time.perf_counter()
-    #Play game to completion for all players.
-    while board.winner(montecarlo.states) == -1:
-        best_move = montecarlo.get_play()
-        next_state = board.next_state(montecarlo.states[-1], best_move)
-        print(next_state)
-        montecarlo.update( next_state )
-
-
-    print("Winner:",Player_Colour(board.winner(montecarlo.states)))
-    toc = time.perf_counter()
-    taken_minutes = (toc - tic)/60
-    print("It has taken",taken_minutes,"minutes.")
-    print(montecarlo.plays)
-
-    
-
-
-# run()

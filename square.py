@@ -53,6 +53,6 @@ class Square:
     def __str__(self):
         return "|"+str(self.piece)+"|"
     def __repr__(self):
-        return "|"+str(self.piece)+" Value: "+str(self.value*1000)+"|"
+        return "|"+str(self.piece)+" "+self.owner.name+" "+str(self.value*1000)+"|"
 
 import player

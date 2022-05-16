@@ -14,64 +14,34 @@ class Game():
     players:list[Player]
     turn_counter:int
 
-    def __init__(self):#, boards:Gameboard=None, players:list[Player]=None, player_counter:int=0, turn_counter:int=0):
-        #Copy Game
-        # if players and boards:
-        #     self.boards = copy_gameboard(boards)
-        #     self.players = []
-        #     for i in range(PLAYER_COUNT):
-        #         #self.players.append( Player(Player_Colour(i), players[i]) )
-        #         self.players.append( copy.deepcopy(players[i]))
-        #     self.player_counter = player_counter
-        #     self.turn_counter = turn_counter
-        # #Create new Game.
-        # else:
+    def __init__(self):
         self.boards = []
         self.players = []
         self.turn_counter = 0
-
         for i in range(PLAYER_COUNT):
-            #print("Creating player.")
             self.players.append( Player(Player_Colour(i)) )
             #Line of Squares owned by Player i.
             self.boards.append([Square(0,self.players[-1].colour),Square(1,self.players[-1].colour),Square(2,self.players[-1].colour),Square(3,self.players[-1].colour)])
 
 
     def get_legal_moves(self) -> list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]]:
+        """Returns all possible moves the current player can make in the current state."""
         player = self.players[self.get_player_turn()]
         plays:list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]] = []
 
         earnings_log:EarningsLog = player.collect_earnings(self.boards)
         conflict_logs:list[ConflictLog] = player.get_valid_resolutions(self.boards)
+
         for conflict_log in conflict_logs:
             placement_logs = player.get_valid_placements(self.boards, conflict_log)
             for placement_log in placement_logs:
-                for two_applications in player.get_valid_applications(self.boards):
+                application_logs = player.get_valid_applications(self.boards)
+                for two_applications in application_logs:
                     application_log:ApplicationLog = list(two_applications)
                     plays.append( (earnings_log, conflict_log, placement_log, application_log) )
-                #No applications.
-                else:
+                if not application_logs:
                     plays.append( (earnings_log, conflict_log, placement_log, []) )
-        #No conflicts
-        else:
-            placement_logs = player.get_valid_placements(self.boards, [])
-            for placement_log in placement_logs:
-                for two_applications in player.get_valid_applications(self.boards):
-                    application_log = list(two_applications)
-                    plays.append( (earnings_log, [], placement_log, application_log) )
-                #No applications.
-                else:
-                    plays.append( (earnings_log, [], placement_log, []) )
-            #No placements.
-            else:
-                for two_applications in player.get_valid_applications(self.boards):
-                    application_log = list(two_applications)
-                    plays.append( (earnings_log, [], [], application_log) )
-                #No applications.
-                else:
-                    plays.append( (earnings_log, [], [], []) )
-
-
+        return plays
         def uniq(lst):
             last = object()
             for item in lst:
@@ -98,7 +68,6 @@ class Game():
 
     def get_next_state(self, play:tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog], debug=False) -> Game:
         """Applies the play to create a new state, which is returned. \n Current state is not modified."""
-        #state = Game(self.boards, self.players, self.player_counter)
         state = copy.deepcopy(self)
         if debug:
             print(state)
@@ -109,13 +78,19 @@ class Game():
         "Return value of the winning player, or -1if it's not ended."
         if self.turn_counter < 20:
             return -1
-        #TODO: Detect ties
+        #TODO: Detect who is tying.
         winner = self.players[0]
         max_money = self.players[0].money
+        tie = False
         for player in self.players:
+            if player.money == max_money:
+                tie = True
             if player.money > max_money:
+                tie = False
                 winner = player
                 max_money = player.money
+        if tie:
+            return PLAYER_COUNT+1
         return winner.colour.value
 
     def __play_move(self, play:tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]) -> None:
@@ -123,8 +98,9 @@ class Game():
 
         def collect_money(player:Player, app:Application):
             """Player collects money from Application."""
+            # print(str(player.money) + " + " + str(app) + " = " + str(player.money + app[2]))
             player.money += app[2]
-            self.players[app[1].owner.value].money -= app[2]
+            self.players[app[0].owner.value].money -= app[2]
 
         earnings_log, conflicts_log, placement_log, application_log = play
         player = self.players[self.get_player_turn()]
@@ -135,6 +111,7 @@ class Game():
         #Collect bribes from rejected entries
         for conflict_list, chosen_application in conflicts_log:
             for app in conflict_list:
+                # print(app)
                 if app is not chosen_application:
                     collect_money(player,app)
 
@@ -159,6 +136,29 @@ class Game():
         return (self.turn_counter) % PLAYER_COUNT
         self.player_counter = (self.player_counter+1) % PLAYER_COUNT
         self.turn_counter += 1
+
+    def __str__(self):
+        def line_str(squares:list[Square]) -> str:
+            """Given a row of squares, prints their simple strings in a line."""
+            line = ""
+            for square in squares:
+                line += str(square)
+            return line
+        
+        board_rep = "________________________________________________________________________"
+        for row in range(len(self.boards)):
+            board_rep += "\n"+line_str(self.boards[row])+Player_Colour(row).name+" \nApplicants: "
+            for piece, square, bribe in self.players[row].palace_applicants:
+                board_rep += repr(piece)+" [Bribe "+str(bribe*1000)+"]; "
+            board_rep +="\n"
+        board_rep += "\n"
+        for p in self.players:
+            board_rep += str(p)
+        board_rep += "\n________________________________________________________________________"
+        return board_rep
+
+    def __repr__(self):
+        return self.__str__()
         
     # def play_game(self):
     #     """
@@ -218,29 +218,6 @@ class Game():
     #         dup.addConnection(copy.deepcopy(c, memo))
     #     return dup
     #     return Game(copy.deepcopy(self.name, memo))
-
-    def __str__(self):
-        def line_str(squares:list[Square]) -> str:
-            """Given a row of squares, prints their simple strings in a line."""
-            line = ""
-            for square in squares:
-                line += str(square)
-            return line
-        
-        board_rep = "________________________________________________________________________"
-        for row in range(len(self.boards)):
-            board_rep += "\n"+line_str(self.boards[row])+Player_Colour(row).name+" \nApplicants: "
-            for piece, square, bribe in self.players[row].palace_applicants:
-                board_rep += repr(piece)+" [Bribe "+str(bribe*1000)+"]; "
-            board_rep +="\n"
-        board_rep += "\n"
-        for p in self.players:
-            board_rep += str(p)
-        board_rep += "\n________________________________________________________________________"
-        return board_rep
-
-    def __repr__(self):
-        return self.__str__()
 
 def run():
     player_types = sys.argv

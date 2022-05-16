@@ -320,23 +320,22 @@ class Player():
                 for piece in valid_pieces:
                     application = (piece, square, self.decide_bribe(piece,square))
                     valid_applications.append( application )
-                    #print (valid_squares[-1])
 
-        #Get every possible combination of two pieces to be sent. [( (Application1,Target),(Application2,Target) )]
-        combs:list[tuple[Application, Application]] = []
+        #Get every possible combination of two pieces to be sent. [(Application1,Application2), ..., ]
+        #Note: (Application1,Application2) == (Application2,Application1), and therefore only one of these is counted.
+        combs:set[tuple[Application, Application]] = set()
         for i in range(len(valid_applications)):
             j = i+1
             while j < len(valid_applications):
-                #The target is different or the pieces being sent are different.
-                if (valid_applications[i][1].owner != valid_applications[j][1].owner) or (valid_applications[i][0] != valid_applications[j][0]):
+                #The target is different or the pieces being sent are different. The target square must be different.
+                if ((valid_applications[i][1].owner != valid_applications[j][1].owner) or (valid_applications[i][0] != valid_applications[j][0])) and valid_applications[i][1] != valid_applications[j][1]:
                     #If the pieces are the same, skip if the player can't send two of those.
                     if valid_applications[i][0] == valid_applications[j][0] and list.count(self.pieces,valid_applications[i][0]) < 2:
                         j += 1
                         continue
-                    combs.append( (valid_applications[i], valid_applications[j]) )
-                # print(combs[-1],i,j)
+                    combs.add( (valid_applications[i], valid_applications[j]) )
                 j += 1
-        return list(set(combs))#list(combinations(valid_squares,2))
+        return list(combs)
 
     def get_random_valid_application(self, board:Gameboard) -> ApplicationLog:
         #TODO: Investigate performance of maintaining a static list of possible application target and picking one randomly.
