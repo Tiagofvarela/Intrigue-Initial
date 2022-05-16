@@ -106,8 +106,11 @@ class Game():
         player = self.players[self.get_player_turn()]
 
         #Collect Earnings
+        # print("\n# Collect Salaries #\n")
         for square in earnings_log:
             player.money += square.value
+            # print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.name+"'s palace.")
+            
         #Collect bribes from rejected entries
         for conflict_list, chosen_application in conflicts_log:
             for app in conflict_list:

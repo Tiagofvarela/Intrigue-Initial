@@ -10,7 +10,7 @@ def run():
     #Set up game board.
     board = Board()
     #Parameters
-    args = {'time':1,'max_moves':120,'C':1.3}
+    args = {'time':10,'max_moves':120,'C':1.3}
     #Set up montecarlo.
     open('search-log.txt', 'w').close()
     montecarlo = MonteCarlo(board, **args)

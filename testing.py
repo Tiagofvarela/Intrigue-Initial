@@ -520,59 +520,17 @@ class TestPlayer(unittest.TestCase):
         internal_app = (red_squares[1].piece, red_squares[1], 0)    #Blue Doctor
         res1_1 = [green_doctor_app, internal_app ], green_doctor_app
         res1_2 = [green_doctor_app, internal_app ], internal_app
-
-        res2_1 = [blue_clerk_app,yellow_clerk_app],blue_clerk_app
+            
         internal_app = (red_squares[2].piece, red_squares[2], 0)    #Green Clerk
-        res2_1_1 = [blue_clerk_app, internal_app], blue_clerk_app
-        res2_1_2 = [blue_clerk_app, internal_app], internal_app
-
-        res2_2 = [blue_clerk_app,yellow_clerk_app],yellow_clerk_app
-        res2_2_1 = [yellow_clerk_app, internal_app], yellow_clerk_app
-        res2_2_2 = [yellow_clerk_app, internal_app], internal_app
+        res2_1 = [blue_clerk_app,yellow_clerk_app,internal_app],blue_clerk_app
+        res2_2 = [blue_clerk_app,yellow_clerk_app,internal_app],yellow_clerk_app
+        res2_3 = [blue_clerk_app,yellow_clerk_app,internal_app],internal_app
 
         res3_1 = [blue_priest_app,green_priest_app,yellow_priest_app], blue_priest_app
         res3_2 = [blue_priest_app,green_priest_app,yellow_priest_app], green_priest_app
         res3_3 = [blue_priest_app,green_priest_app,yellow_priest_app], yellow_priest_app
 
         valid_combinations = [
-            #RES1_1
-            #res2-1
-            [res1_1,res2_1,res2_1_1,res3_1],
-            [res1_1,res2_1,res2_1_1,res3_2],
-            [res1_1,res2_1,res2_1_1,res3_3],
-            #res2-1-2
-            [res1_1,res2_1,res2_1_2,res3_1],
-            [res1_1,res2_1,res2_1_2,res3_2],
-            [res1_1,res2_1,res2_1_2,res3_3],
-            #res2-2
-            [res1_1,res2_2,res2_2_1,res3_1],
-            [res1_1,res2_2,res2_2_1,res3_2],
-            [res1_1,res2_2,res2_2_1,res3_3],
-            #res2-2-2
-            [res1_1,res2_2,res2_2_2,res3_1],
-            [res1_1,res2_2,res2_2_2,res3_2],
-            [res1_1,res2_2,res2_2_2,res3_3],
-
-            #RES1_2
-            #res2-1
-            [res1_2,res2_1,res2_1_1,res3_1],
-            [res1_2,res2_1,res2_1_1,res3_2],
-            [res1_2,res2_1,res2_1_1,res3_3],
-            #res2-1-2
-            [res1_2,res2_1,res2_1_2,res3_1],
-            [res1_2,res2_1,res2_1_2,res3_2],
-            [res1_2,res2_1,res2_1_2,res3_3],
-            #res2-2
-            [res1_2,res2_2,res2_2_1,res3_1],
-            [res1_2,res2_2,res2_2_1,res3_2],
-            [res1_2,res2_2,res2_2_1,res3_3],
-            #res2-2-2
-            [res1_2,res2_2,res2_2_2,res3_1],
-            [res1_2,res2_2,res2_2_2,res3_2],
-            [res1_2,res2_2,res2_2_2,res3_3],
-        ]
-
-        middle_combinations = [
             #RES1_1
             #res2-1
             [res1_1,res2_1,res3_1],
@@ -582,6 +540,10 @@ class TestPlayer(unittest.TestCase):
             [res1_1,res2_2,res3_1],
             [res1_1,res2_2,res3_2],
             [res1_1,res2_2,res3_3],
+            #res2-3
+            [res1_1,res2_3,res3_1],
+            [res1_1,res2_3,res3_2],
+            [res1_1,res2_3,res3_3],
 
             #RES1_2
             #res2-1
@@ -592,33 +554,17 @@ class TestPlayer(unittest.TestCase):
             [res1_2,res2_2,res3_1],
             [res1_2,res2_2,res3_2],
             [res1_2,res2_2,res3_3],
-
+            #res2-3
+            [res1_2,res2_3,res3_1],
+            [res1_2,res2_3,res3_2],
+            [res1_2,res2_3,res3_3],
         ]
-
-        simple_combinations = [
-            [res2_1,res3_1],
-            [res2_1,res3_2],
-            [res2_1,res3_3],
-
-            [res2_2,res3_1],
-            [res2_2,res3_2],
-            [res2_2,res3_3]
-        ]
-
 
         found_combinations = red.get_valid_resolutions(game.boards)
-
-        #First Element: res2_1, res3_2
-        # print_application_list(found_combinations[0])
-        #BUG: List with one green doctor, from which a green doctor is selected.
-
-        # self.assertEqual( len(found_combinations), len(simple_combinations) )
-        # for comb in found_combinations:
-        #     self.assertIn(comb, simple_combinations)
-        hash_middle_combinations:list = []
+        hash_valid_combinations:list = []
         hash_found_combinations:list = []
-        for i in range(len(middle_combinations)):
-            hash_middle_combinations.append(recursive_hash_object(middle_combinations[i]))
+        for i in range(len(valid_combinations)):
+            hash_valid_combinations.append(recursive_hash_object(valid_combinations[i]))
             hash_found_combinations.append(recursive_hash_object(found_combinations[i]))
 
         # print("\n")
@@ -629,148 +575,97 @@ class TestPlayer(unittest.TestCase):
         # print(sorted(hash_found_combinations) )
         # print("\n")
 
-        self.assertEqual( len(hash_found_combinations), len(hash_middle_combinations) )
+        self.assertEqual( len(hash_found_combinations), len(hash_valid_combinations) )
         for hash_el in hash_found_combinations:
-            self.assertIn(hash_el, hash_middle_combinations)            
-
-        # self.assertEqual( len(found_combinations), len(valid_combinations) )
-        # for comb in found_combinations:
-        #     self.assertIn(comb, valid_combinations)
+            self.assertIn(hash_el, hash_valid_combinations)     
 
     def test_get_random_valid_resolutions(self):
-            game = Game()
-            red,green,blue,yellow = game.players
-            red_squares,green_squares,blue_squares,yellow_squares = game.boards
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
 
-            red_squares[0].piece = None
-            red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
-            red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
-            red_squares[3].piece = None
+        red_squares[0].piece = None
+        red_squares[1].piece = Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)
+        red_squares[2].piece = Piece(Player_Colour.GREEN, Piece_Type.CLERK)
+        red_squares[3].piece = None
 
-            #Internal
-            green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
-            #External then Internal
-            blue_clerk_app = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
-            yellow_clerk_app = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
-            #External 3
-            blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
-            green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
-            yellow_priest_app = (Piece(Player_Colour.YELLOW, Piece_Type.PRIEST), red_squares[3], 0)
+        #Internal
+        green_doctor_app = (Piece(Player_Colour.GREEN, Piece_Type.DOCTOR), red_squares[1], 0)
+        #External then Internal
+        blue_clerk_app = (Piece(Player_Colour.BLUE, Piece_Type.CLERK), red_squares[2], 0)
+        yellow_clerk_app = (Piece(Player_Colour.YELLOW, Piece_Type.CLERK), red_squares[2], 0)
+        #External 3
+        blue_priest_app = (Piece(Player_Colour.BLUE, Piece_Type.PRIEST), red_squares[3], 0)
+        green_priest_app = (Piece(Player_Colour.GREEN, Piece_Type.PRIEST), red_squares[3], 0)
+        yellow_priest_app = (Piece(Player_Colour.YELLOW, Piece_Type.PRIEST), red_squares[3], 0)
 
-            #Jumbled
-            red.palace_applicants.append( green_priest_app )
-            red.palace_applicants.append( green_doctor_app )
-            red.palace_applicants.append( blue_clerk_app )
-            red.palace_applicants.append( blue_priest_app )
-            red.palace_applicants.append( yellow_priest_app )
-            red.palace_applicants.append( yellow_clerk_app )
+        #Jumbled
+        red.palace_applicants.append( green_priest_app )
+        red.palace_applicants.append( green_doctor_app )
+        red.palace_applicants.append( blue_clerk_app )
+        red.palace_applicants.append( blue_priest_app )
+        red.palace_applicants.append( yellow_priest_app )
+        red.palace_applicants.append( yellow_clerk_app )
 
-            #Possible Resolutions
-            internal_app = (red_squares[1].piece, red_squares[1], 0)    #Blue Doctor
-            res1_1 = [green_doctor_app, internal_app ], green_doctor_app
-            res1_2 = [green_doctor_app, internal_app ], internal_app
-
-            res2_1 = [blue_clerk_app,yellow_clerk_app],blue_clerk_app
-            internal_app = (red_squares[2].piece, red_squares[2], 0)    #Green Clerk
-            res2_1_1 = [blue_clerk_app, internal_app], blue_clerk_app
-            res2_1_2 = [blue_clerk_app, internal_app], internal_app
-
-            res2_2 = [blue_clerk_app,yellow_clerk_app],yellow_clerk_app
-            res2_2_1 = [yellow_clerk_app, internal_app], yellow_clerk_app
-            res2_2_2 = [yellow_clerk_app, internal_app], internal_app
-
-            res3_1 = [blue_priest_app,green_priest_app,yellow_priest_app], blue_priest_app
-            res3_2 = [blue_priest_app,green_priest_app,yellow_priest_app], green_priest_app
-            res3_3 = [blue_priest_app,green_priest_app,yellow_priest_app], yellow_priest_app
-
-            valid_combinations = [
-                #RES1_1
-                #res2-1
-                [res1_1,res2_1,res2_1_1,res3_1],
-                [res1_1,res2_1,res2_1_1,res3_2],
-                [res1_1,res2_1,res2_1_1,res3_3],
-                #res2-1-2
-                [res1_1,res2_1,res2_1_2,res3_1],
-                [res1_1,res2_1,res2_1_2,res3_2],
-                [res1_1,res2_1,res2_1_2,res3_3],
-                #res2-2
-                [res1_1,res2_2,res2_2_1,res3_1],
-                [res1_1,res2_2,res2_2_1,res3_2],
-                [res1_1,res2_2,res2_2_1,res3_3],
-                #res2-2-2
-                [res1_1,res2_2,res2_2_2,res3_1],
-                [res1_1,res2_2,res2_2_2,res3_2],
-                [res1_1,res2_2,res2_2_2,res3_3],
-
-                #RES1_2
-                #res2-1
-                [res1_2,res2_1,res2_1_1,res3_1],
-                [res1_2,res2_1,res2_1_1,res3_2],
-                [res1_2,res2_1,res2_1_1,res3_3],
-                #res2-1-2
-                [res1_2,res2_1,res2_1_2,res3_1],
-                [res1_2,res2_1,res2_1_2,res3_2],
-                [res1_2,res2_1,res2_1_2,res3_3],
-                #res2-2
-                [res1_2,res2_2,res2_2_1,res3_1],
-                [res1_2,res2_2,res2_2_1,res3_2],
-                [res1_2,res2_2,res2_2_1,res3_3],
-                #res2-2-2
-                [res1_2,res2_2,res2_2_2,res3_1],
-                [res1_2,res2_2,res2_2_2,res3_2],
-                [res1_2,res2_2,res2_2_2,res3_3],
-            ]
-
-            middle_combinations = [
-                #RES1_1
-                #res2-1
-                [res1_1,res2_1,res3_1],
-                [res1_1,res2_1,res3_2],
-                [res1_1,res2_1,res3_3],
-                #res2-2
-                [res1_1,res2_2,res3_1],
-                [res1_1,res2_2,res3_2],
-                [res1_1,res2_2,res3_3],
-
-                #RES1_2
-                #res2-1
-                [res1_2,res2_1,res3_1],
-                [res1_2,res2_1,res3_2],
-                [res1_2,res2_1,res3_3],
-                #res2-2
-                [res1_2,res2_2,res3_1],
-                [res1_2,res2_2,res3_2],
-                [res1_2,res2_2,res3_3],
-
-            ]
-
-            simple_combinations = [
-                [res2_1,res3_1],
-                [res2_1,res3_2],
-                [res2_1,res3_3],
-
-                [res2_2,res3_1],
-                [res2_2,res3_2],
-                [res2_2,res3_3]
-            ]   
-
-            hashed_expected_resolutions = []
-            hashed_found_resolutions = set()
-            for comb in valid_combinations:#middle_combinations:
-                hashed_expected_resolutions.append(recursive_hash_object(comb))
+        #Possible Resolutions
+        internal_app = (red_squares[1].piece, red_squares[1], 0)    #Blue Doctor
+        res1_1 = [green_doctor_app, internal_app ], green_doctor_app
+        res1_2 = [green_doctor_app, internal_app ], internal_app
             
-            i = 0
-            while i < 10000:
-                found_conflict_log = red.get_random_valid_resolution(game.boards)
+        internal_app = (red_squares[2].piece, red_squares[2], 0)    #Green Clerk
+        res2_1 = [blue_clerk_app,yellow_clerk_app,internal_app],blue_clerk_app
+        res2_2 = [blue_clerk_app,yellow_clerk_app,internal_app],yellow_clerk_app
+        res2_3 = [blue_clerk_app,yellow_clerk_app,internal_app],internal_app
 
-                #self.assertIn(found_conflict_log, middle_combinations)
-                found_hash = recursive_hash_object(found_conflict_log)
-                self.assertIn(found_hash, hashed_expected_resolutions)
-                hashed_found_resolutions.add(found_hash)
-                if len(hashed_found_resolutions) == len(hashed_expected_resolutions):
-                    break
-                i += 1
-            self.assertEqual(sorted(hashed_expected_resolutions), sorted(list(hashed_found_resolutions)))
+        res3_1 = [blue_priest_app,green_priest_app,yellow_priest_app], blue_priest_app
+        res3_2 = [blue_priest_app,green_priest_app,yellow_priest_app], green_priest_app
+        res3_3 = [blue_priest_app,green_priest_app,yellow_priest_app], yellow_priest_app
+
+        valid_combinations = [
+        #RES1_1
+        #res2-1
+        [res1_1,res2_1,res3_1],
+        [res1_1,res2_1,res3_2],
+        [res1_1,res2_1,res3_3],
+        #res2-2
+        [res1_1,res2_2,res3_1],
+        [res1_1,res2_2,res3_2],
+        [res1_1,res2_2,res3_3],
+        #res2-3
+        [res1_1,res2_3,res3_1],
+        [res1_1,res2_3,res3_2],
+        [res1_1,res2_3,res3_3],
+
+        #RES1_2
+        #res2-1
+        [res1_2,res2_1,res3_1],
+        [res1_2,res2_1,res3_2],
+        [res1_2,res2_1,res3_3],
+        #res2-2
+        [res1_2,res2_2,res3_1],
+        [res1_2,res2_2,res3_2],
+        [res1_2,res2_2,res3_3],
+        #res2-3
+        [res1_2,res2_3,res3_1],
+        [res1_2,res2_3,res3_2],
+        [res1_2,res2_3,res3_3],
+        ]
+
+        hashed_expected_resolutions = []
+        hashed_found_resolutions = set()
+        for comb in valid_combinations:
+            hashed_expected_resolutions.append(recursive_hash_object(comb))
+        
+        i = 0
+        while i < 10000:
+            found_conflict_log = red.get_random_valid_resolution(game.boards)
+            found_hash = recursive_hash_object(found_conflict_log)
+            self.assertIn(found_hash, hashed_expected_resolutions)
+            hashed_found_resolutions.add(found_hash)
+            if len(hashed_found_resolutions) == len(hashed_expected_resolutions):
+                break
+            i += 1
+        self.assertEqual(sorted(hashed_expected_resolutions), sorted(list(hashed_found_resolutions)))
 
 class TestGame(unittest.TestCase):
     def test_play_game(self):

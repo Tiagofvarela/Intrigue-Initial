@@ -8,87 +8,6 @@ from intrigue_datatypes import MINIMUM_BRIBE, PLAYER_COUNT, Piece_Type, Player_C
 from square import Square
 from random import choice, randint
 
-Application = tuple[Piece,Square,int]
-"""The Piece being sent, the Square sent to, and the bribe."""
-Gameboard = list[list[Square]]
-
-EarningsLog = list[Square]
-"""Squares to collect earnings for this turn."""
-ConflictLog = list[tuple[list[Application], Application]]
-"""Tuples with conflicts and corresponding bribes, as well as the chosen application."""
-PlacementLog = list[tuple[Application, Square]]
-"""Tuples with the chosen application, and its placement."""
-ApplicationLog = list[Application]
-"""Tuples with the applications to be sent."""
-
-def print_application(app:Application):
-    print(app[0])
-def print_application_list(apps:list[Application]):
-    for app in apps:
-        print_application(app)
-    print("\n")
-
-def recursive_hash_object(element) -> int:
-    """Given an object, converts the object into a hash, taking into acount lists and tuples within."""
-    counter = 0
-    sum = 1
-    if isinstance(element, tuple):   #Order matters
-        for el in element:
-            counter += 1
-            sum *= recursive_hash_object(el)*3**counter 
-            #The new element's value in a tuple should change tuple id depending on previous values.
-    elif isinstance(element, list):    #Order does not matter
-        for el in element:
-            sum += recursive_hash_object(el)
-    else:
-        sum += hash(element)
-    # print(str(element),"Value:",str(sum),"No of elements in tuple:",str(counter))
-    return sum
-
-# def app_get_piece(app:Application) -> Piece:
-#     return app[0]
-
-# def conflict_get_piece_val(conflict_log:tuple[list[Application], Application]) -> int:
-#     first_piece:Piece = conflict_log[0][0][0]
-#     selected_piece:Piece = conflict_log[1][0]
-#     return first_piece.type.value+first_piece.owner.value+selected_piece.type.value+selected_piece.owner.value
-
-# def conflict_log_get_val(conflict_log:ConflictLog) -> int:
-#     count = 0
-#     for conflict in conflict_log:
-#         count += conflict_get_piece_val(conflict)
-#     return count
-
-# def sort_ConflictLog(conflict_log:ConflictLog) -> ConflictLog:
-#         new_conflict_log:ConflictLog = []
-#         sorted_log = sorted(conflict_log,key=conflict_get_piece_val)
-#         for conflict, selected in sorted_log:
-#             new_conflict:list[Application] = sorted(conflict,key=app_get_piece)
-#             new_conflict_log.append( (new_conflict, selected) )
-#         return new_conflict_log
-
-# def hash_application(app:Application) -> tuple[int,int,int]:
-#     return (app[0].__hash__(), app[1].__hash__(), app[2])
-
-# def hash_ConflictLog(conflict_log:ConflictLog) -> list[tuple[list[tuple[int, int, int]], tuple[int, int, int]]]:
-#         new_conflict_log:list[tuple[list[tuple[int, int, int]], tuple[int, int, int]]] = []
-#         for conflict, selected in conflict_log:
-#             new_conflict:list[tuple[int,int,int]] = []
-#             for app in conflict:
-#                 new_conflict.append( hash_application(app) )
-#             new_conflict_log.append( (new_conflict, hash_application(selected)) )
-#         return new_conflict_log
-# def copy_application(application:Application) -> Application:
-#     return (application[0].copy(),application[1].copy(),application[2])
-# def copy_gameboard(board:Gameboard) -> Gameboard:
-#     copy:list[list[Square]] = []
-#     for palace in board:
-#         palace_copy:list[Square] = []
-#         for square in palace:
-#             palace_copy.append(square.copy())
-#         copy.append(palace_copy)
-#     return copy
-
 class Player():
     """This class should hold only the information that's unique to it, and receive all other information it needs from Game.
     \nTo create new behaviours, extend this class and implement play_piece, place_uncontested, resolve_external_conflict, and
@@ -120,20 +39,7 @@ class Player():
         #         model[Player_Colour(i)] = {}
         #         for j in range(0,4):
         #             model[Player_Colour(i)][Player_Colour(j)] = 0
-        #     return model
-        
-        #This instance should be a copy of the above player.
-        # if copy:
-        #     self.money = copy.money
-        #     self.colour = copy.colour
-        #     self.pieces = []
-        #     for piece in copy.pieces:
-        #         self.pieces += [Piece(self.colour,piece.type)]
-        #     self.palace_applicants = []
-        #     for app_piece,app_square,bribe in copy.palace_applicants:
-        #         self.palace_applicants += [(app_piece.copy(), app_square.copy(), bribe)]
-        #     return
-                
+        #     return model                
 
         self.money = STARTING_MONEY
         self.colour = colour
@@ -145,14 +51,11 @@ class Player():
         """Player sweeps through each square and collects their earnings. Returns list of squares to collect from.
         Player money value is not changed."""
         collected_salaries: list[Square] = []
-        # print("\n# Collect Salaries #\n")
         for i in range(len(board)):
             if Player_Colour(i) != self.colour: #Checks only others' palaces.
                 for j in range(4):
                     square = board[i][j]
                     if square.piece and square.piece.owner == self.colour:
-                        #self.money += square.value
-                        # print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.name+"'s palace.")
                         collected_salaries.append( copy.deepcopy(square) )
         return collected_salaries
 
@@ -271,14 +174,14 @@ class Player():
 
         # return conflicts_log, placement_log
 
-    def collect_bribes(self, applications:list[Application]) -> list[Application]:
-        """Collects all bribes from a list of applications and returns a list with how much each application paid."""
-        #Ask for bribe from each player.
-        for application in applications:
-            #bribe:int = application[0].owner.decide_bribe(application, previous_bribes)
-            self.money += application[2]
-            print(application[0].owner.name+" has paid "+str(application[2]*1000)+" for "+str(application))
-        return applications    
+    # def collect_bribes(self, applications:list[Application]) -> list[Application]:
+    #     """Collects all bribes from a list of applications and returns a list with how much each application paid."""
+    #     #Ask for bribe from each player.
+    #     for application in applications:
+    #         #bribe:int = application[0].owner.decide_bribe(application, previous_bribes)
+    #         self.money += application[2]
+    #         print(application[0].owner.name+" has paid "+str(application[2]*1000)+" for "+str(application))
+    #     return applications    
 
     # def get_max_value_unoccupied_squares(self, board:Gameboard):
     #     """Returns the most valuable and valid squares available on the board, or an empty list if there's no unoccupied square.
@@ -327,7 +230,7 @@ class Player():
         for i in range(len(valid_applications)):
             j = i+1
             while j < len(valid_applications):
-                #The target is different or the pieces being sent are different. The target square must be different.
+                #The target palace is different or the pieces being sent are different. The target square must be different.
                 if ((valid_applications[i][1].owner != valid_applications[j][1].owner) or (valid_applications[i][0] != valid_applications[j][0])) and valid_applications[i][1] != valid_applications[j][1]:
                     #If the pieces are the same, skip if the player can't send two of those.
                     if valid_applications[i][0] == valid_applications[j][0] and list.count(self.pieces,valid_applications[i][0]) < 2:
@@ -338,6 +241,7 @@ class Player():
         return list(combs)
 
     def get_random_valid_application(self, board:Gameboard) -> ApplicationLog:
+        """Randomply generate a valid ApplicationLog."""
         #TODO: Investigate performance of maintaining a static list of possible application target and picking one randomly.
         applications:list[Application] = []
         valid_board_indexes = [i for i in list(range(0,len(board))) if i != self.colour.value]
@@ -370,61 +274,28 @@ class Player():
             repeat_j = j
         return applications
 
-    # def get_valid_resolutions(self, board:Gameboard) -> list[ConflictLog]:
-    #     """Returns all valid conflict resolutions for this player's turn."""
-    #     external_conflicts:list[list[Application]] = []
-    #     #Check external conflicts. 
-    #     for type in range(100,104):
-    #         applications_of_type:list[Application] = self.__find_type_applications__(Piece_Type(type), self.palace_applicants)            
-    #         #First save each group of conflicts. Once all are stored, start making the combinations.
-    #         if len(applications_of_type) > 1:
-    #             external_conflicts.append(applications_of_type)
-        
-    #     # print(external_conflicts)
-    #     #Picks one application from each list, creating all combinations of picking one application from each conflict. Each tuple contains one valid play for the turn.
-    #     valid_external_combinations:list[tuple[Application,...]] = list(product(*external_conflicts))
-
-    #     #TODO: Add internal conflicts too.
-    #     #self.generate_conflict_log(external_conflicts+internal_conflicts, valid_external_combinations+valid_internal_conflicts)
-    #     return self.generate_conflict_log(external_conflicts, valid_external_combinations)
-
     def get_valid_resolutions(self, board:Gameboard) -> list[ConflictLog]:
         """Returns all valid conflict resolutions for this player's turn."""
-        external_conflicts:list[list[Application]] = []
 
-        #Each conflict can have a dependent conflict.True if it does.
-        dependent_conflicts:dict[ Boolean,list[list[Application]] ] = {True:[],False:[]}
-        #Check external conflicts. 
+        conflicts:list[list[Application]] = []
+        #Check conflicts. 
         for piece_type_int in range(100,104):
             applications_of_type:list[Application] = self.__find_type_applications__(Piece_Type(piece_type_int), self.palace_applicants)            
-            
-            internal = False
+
+            #If internal conflict exists, adds them to the list of contenders.
             for square in board[self.colour.value]:
                 if square.piece and Piece_Type(piece_type_int) == square.piece.type:
-                    internal =  True
+                    applications_of_type.append( (square.piece,square,0) )
                     break
+
             #First save each group of conflicts. Once all are stored, start making the combinations.
-            external = len(applications_of_type) > 1
-            if external:
-                #External
-                dependent_conflicts[False].append(applications_of_type)
-                #External Dependent TODO
-                # if internal:
-                #     dependent_conflicts[True].append(applications_of_type)
-            elif internal:
-                assert square.piece
-                #Internal
-                dependent_conflicts[False].append(applications_of_type+[(square.piece,square,0)])
+            if len(applications_of_type) > 1:
+                conflicts.append(applications_of_type)
 
-        # for e in dependent_conflicts[False]:
-        #     print_application_list(e)
-
-        #For each application list select one. Deal with cases with a dependent internal conflict.
+        #For each application list select one.
         conflict_combinations:list[ConflictLog] = []
-        depth_combinations(dependent_conflicts[False],[],conflict_combinations)
+        depth_combinations(conflicts,[],conflict_combinations)
         
-        #With list of ([Application],Application) check if internal appears in any [Application].
-        #For the ones that appear, there must be a combination with [1] beforehand.
         return conflict_combinations
 
     def get_random_valid_resolution(self,board:Gameboard) -> ConflictLog:
@@ -436,28 +307,34 @@ class Player():
         for piece_type_int in range(100,104):
             applications_of_type:list[Application] = self.__find_type_applications__(Piece_Type(piece_type_int), applicants)            
             #TODO: Sort list to optimise finding conflicts.
-            
+
+            #If internal conflict exists, adds them to the list of contenders.
+            for square in board[self.colour.value]:
+                if square.piece and Piece_Type(piece_type_int) == square.piece.type:
+                    applications_of_type.append( (square.piece,square,0) )
+                    break
+            #If conflict exists, add it.
             if len(applications_of_type) > 1:
                 #Resolve external.
                 chosen_application = random.choice(applications_of_type)
                 resolution.append( (applications_of_type, chosen_application) )
                 applicants = [app for app in applicants if app not in applications_of_type]
 
-                #TODO: Finish get_valid_resolution implementation for internal after external.
-                #Resolve internal after external.
-                for square in board[self.colour.value]:
-                    if square.piece:
-                        if square.piece.type == chosen_application[0].type:
-                            internal_conflict = [chosen_application, (square.piece,square,0)]
-                            resolution.append( (internal_conflict, random.choice(internal_conflict)) )
-            elif len(applications_of_type) == 1:
-                #Resolve internal if no external conflict exists.
-                for square in board[self.colour.value]:
-                    if square.piece:
-                        current_application = applications_of_type[0]
-                        if square.piece.type == current_application[0].type:
-                            internal_conflict = [current_application, (square.piece,square,0)]
-                            resolution.append( (internal_conflict, random.choice(internal_conflict)) )
+            #     #TODO: Finish get_valid_resolution implementation for internal after external.
+            #     #Resolve internal after external.
+            #     for square in board[self.colour.value]:
+            #         if square.piece:
+            #             if square.piece.type == chosen_application[0].type:
+            #                 internal_conflict = [chosen_application, (square.piece,square,0)]
+            #                 resolution.append( (internal_conflict, random.choice(internal_conflict)) )
+            # elif len(applications_of_type) == 1:
+            #     #Resolve internal if no external conflict exists.
+            #     for square in board[self.colour.value]:
+            #         if square.piece:
+            #             current_application = applications_of_type[0]
+            #             if square.piece.type == current_application[0].type:
+            #                 internal_conflict = [current_application, (square.piece,square,0)]
+            #                 resolution.append( (internal_conflict, random.choice(internal_conflict)) )
 
 
         #Applicants contains the applications with no conflicts. Applicants is local and has no further use.
@@ -645,7 +522,9 @@ class Player():
     def __repr__(self):
         return str(self.colour)
 
-    
+            ##########################
+            ### AUXILARY FUNCTIONS ###
+            ##########################  
 
 #Create recursive function that
         #[a,b][c,d,e][f,g] -> to_select
@@ -671,3 +550,85 @@ def depth_combinations(to_select:list[list[Application]], current:ConflictLog, c
         return
     for elem in copy.copy(to_select[0]):
         depth_combinations(to_select[1:],current+[(to_select[0],elem)],combinations)
+
+
+Application = tuple[Piece,Square,int]
+"""The Piece being sent, the Square sent to, and the bribe."""
+Gameboard = list[list[Square]]
+
+EarningsLog = list[Square]
+"""Squares to collect earnings for this turn."""
+ConflictLog = list[tuple[list[Application], Application]]
+"""Tuples with conflicts and corresponding bribes, as well as the chosen application."""
+PlacementLog = list[tuple[Application, Square]]
+"""Tuples with the chosen application, and its placement."""
+ApplicationLog = list[Application]
+"""Tuples with the applications to be sent."""
+
+def print_application(app:Application):
+    print(app[0])
+def print_application_list(apps:list[Application]):
+    for app in apps:
+        print_application(app)
+    print("\n")
+
+def recursive_hash_object(element) -> int:
+    """Given an object, converts the object into a hash, taking into acount lists and tuples within."""
+    counter = 0
+    sum = 1
+    if isinstance(element, tuple):   #Order matters
+        for el in element:
+            counter += 1
+            sum *= recursive_hash_object(el)*3**counter 
+            #The new element's value in a tuple should change tuple id depending on previous values.
+    elif isinstance(element, list):    #Order does not matter
+        for el in element:
+            sum += recursive_hash_object(el)
+    else:
+        sum += hash(element)
+    # print(str(element),"Value:",str(sum),"No of elements in tuple:",str(counter))
+    return sum
+
+# def app_get_piece(app:Application) -> Piece:
+#     return app[0]
+
+# def conflict_get_piece_val(conflict_log:tuple[list[Application], Application]) -> int:
+#     first_piece:Piece = conflict_log[0][0][0]
+#     selected_piece:Piece = conflict_log[1][0]
+#     return first_piece.type.value+first_piece.owner.value+selected_piece.type.value+selected_piece.owner.value
+
+# def conflict_log_get_val(conflict_log:ConflictLog) -> int:
+#     count = 0
+#     for conflict in conflict_log:
+#         count += conflict_get_piece_val(conflict)
+#     return count
+
+# def sort_ConflictLog(conflict_log:ConflictLog) -> ConflictLog:
+#         new_conflict_log:ConflictLog = []
+#         sorted_log = sorted(conflict_log,key=conflict_get_piece_val)
+#         for conflict, selected in sorted_log:
+#             new_conflict:list[Application] = sorted(conflict,key=app_get_piece)
+#             new_conflict_log.append( (new_conflict, selected) )
+#         return new_conflict_log
+
+# def hash_application(app:Application) -> tuple[int,int,int]:
+#     return (app[0].__hash__(), app[1].__hash__(), app[2])
+
+# def hash_ConflictLog(conflict_log:ConflictLog) -> list[tuple[list[tuple[int, int, int]], tuple[int, int, int]]]:
+#         new_conflict_log:list[tuple[list[tuple[int, int, int]], tuple[int, int, int]]] = []
+#         for conflict, selected in conflict_log:
+#             new_conflict:list[tuple[int,int,int]] = []
+#             for app in conflict:
+#                 new_conflict.append( hash_application(app) )
+#             new_conflict_log.append( (new_conflict, hash_application(selected)) )
+#         return new_conflict_log
+# def copy_application(application:Application) -> Application:
+#     return (application[0].copy(),application[1].copy(),application[2])
+# def copy_gameboard(board:Gameboard) -> Gameboard:
+#     copy:list[list[Square]] = []
+#     for palace in board:
+#         palace_copy:list[Square] = []
+#         for square in palace:
+#             palace_copy.append(square.copy())
+#         copy.append(palace_copy)
+#     return copy
