@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 from gamelog import GameLog
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour, MINIMUM_BRIBE
-from player import Application, Gameboard, Player, EarningsLog, ConflictLog, PlacementLog, ApplicationLog#, copy_application, copy_gameboard
+from player import Application, Gameboard, Player, EarningsLog, ConflictLog, PlacementLog, ApplicationLog, recursive_hash_object#, copy_application, copy_gameboard
 from piece import Piece
 from square import Square
 from random import choice, randint
@@ -110,7 +110,7 @@ class Game():
         for square in earnings_log:
             player.money += square.value
             # print(self.colour.name+" collected "+str(square.value*1000)+" from "+str(square)+" in "+square.owner.name+"'s palace.")
-            
+
         #Collect bribes from rejected entries
         for conflict_list, chosen_application in conflicts_log:
             for app in conflict_list:
@@ -162,6 +162,26 @@ class Game():
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self) -> int:
+        #Gameboard
+        tuple_boards = (tuple(self.boards[0]),tuple(self.boards[1]),tuple(self.boards[2]),tuple(self.boards[3]))
+        tuple_boards_hash = recursive_hash_object(tuple_boards)
+        #Player
+        player_pieces_hash = 0
+        player_applications_hash = 0
+        player_money = 0
+        for player in self.players:
+            #Player_Money
+            player_money += player.money*(3+player.colour.value)
+            #Player_Pieces
+            player_pieces_hash += recursive_hash_object(player.pieces)*(3+player.colour.value)
+            #Player_Applications
+            for app in player.palace_applicants:
+                player_applications_hash += recursive_hash_object(app)
+            player_applications_hash = player_applications_hash*(3+player.colour.value)  
+              
+        return tuple_boards_hash+player_money*2+player_applications_hash*3+player_pieces_hash*4+self.turn_counter*5
         
     # def play_game(self):
     #     """

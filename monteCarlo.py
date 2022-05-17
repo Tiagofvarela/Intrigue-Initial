@@ -6,7 +6,7 @@ import datetime
 from math import sqrt, log
 from random import choice
 import time
-from board import Board
+from board import Board, GameMove
 from intrigue import Game
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour
 from player import Player, recursive_hash_object
@@ -17,13 +17,17 @@ class MonteCarlo(object):
         """Takes an instance of a Board and optionally some keyword arguments. 
         Initializes the list of game states and the statistics tables."""
         self.board:Board = board
-        self.states = []
+        self.states:list[Game] = []
         seconds = kwargs.get('time', 30)
         self.calculation_time = datetime.timedelta(seconds=seconds)
         self.max_moves = kwargs.get('max_moves', 100)
-        self.wins:dict[int,Game] = {}
-        self.plays:dict[int,Game] = {}
+        self.wins:dict[int,int] = {}
+        self.plays:dict[int,int] = {}
         self.C = kwargs.get('C', 1.4)
+
+        self.legal_moves_memory:dict[int,list[tuple[GameMove,Game]]] = {}
+        self.id_to_game:dict[int,Game] = {}
+        """Given a unique ID, stores the game corresponding to it. (The ID is the game's hash value.)"""
         
         self.max_depth = 0
 
@@ -45,96 +49,123 @@ class MonteCarlo(object):
             return
         if len(legal) == 1:
             return legal[0]
+        
+        moves_states = [(play, self.board.next_state(state, play)) for play in legal]
 
         games = 0
         begin = datetime.datetime.utcnow()
         while datetime.datetime.utcnow() - begin < self.calculation_time:
-            self.run_simulation()
+            self.run_simulation(moves_states)
             games += 1
         
-        moves_states = [(p, self.board.next_state(state, p)) for p in legal]
         file = open("search-log.txt","a")
 
         # Display the number of calls of `run_simulation` and the time elapsed.
         file.write("Plays simulated: "+str(games)+"\n")
         file.write("Time spent simulating plays: "+str(datetime.datetime.utcnow() - begin)+"\n")
 
-        percent_wins, move = max( (self.wins.get((player, S), 0) / self.plays.get((player, S), 1), play) for play, S in moves_states)
+        percent_wins, move = max( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
 
         # Display the stats for each possible play.
         for x in sorted(
-            ((100 * self.wins.get((player, S), 0) /
-              self.plays.get((player, S), 1),
-              self.wins.get((player, S), 0),
-              self.plays.get((player, S), 0), p)
+            ((100 * self.wins.get(recursive_hash_object((player, S)), 0) /
+              self.plays.get(recursive_hash_object((player, S)), 1),           #Win percentage
+              self.wins.get(recursive_hash_object((player, S)), 0),            #Number of Wins.
+              self.plays.get(recursive_hash_object((player, S)), 0),           #Number of times simulated.
+              p)                                        #Play
              for p, S in moves_states),
             reverse=True
         ):
-            file.write("{3}: {0:.2f}% ({1} / {2})".format(*x)+"\n")
+            # percentage, wins, plays, play = x
+            # readable_play = ""
+            # for el in play[1]:
+            #     pass
+            # (play[1],play[2],play[3])
+            file.write("{3}: {0:.2f}% ({1} / {2})".format(*x)+"\n") #play: win_percentage% (wins / plays)
         file.write("Maximum depth searched: "+ str(self.max_depth)+"\n\n")
         file.close()
 
+        # print(self.plays)
+
         return move
 
-    def run_simulation(self):
+    def run_simulation(self, moves_states:list[tuple[GameMove,Game]]):
         """Plays out a "random" game from the current position, then updates the statistics tables with the result."""
 
-        visited_states = set()
-        states_copy:list[Game] = self.states[:]
-        state = states_copy[-1]
+        visited_states:dict[int,tuple[int,Game]] = {}
+        states_so_far:list[Game] = self.states[:]
+        state:Game = states_so_far[-1]
         player = self.board.current_player(state)
 
+        
+        #All moves should be generated in order to explore interesting games.
+        #But this generation only needs to be done once, since the starting state is always the same.
+        #Depth 1, 2, 3 and so on do not need to apply UCT. They choose a move randomly.
+        starting_move = True
+
         #Generates all legal plays for current state and picks one to be next state.
-        expand = True   #
+        expand = True
         for move_counter in range(self.max_moves):
-            # legal = self.board.legal_plays(states_copy)
-            # moves_states = [(play, self.board.next_state(state, play)) for play in legal]
 
-            # # If we have stats on all of the legal moves here, use them.
-            # for play, S in moves_states:
-            #     already_recorded = self.plays.get( (player, S) )
-            #     if not already_recorded:
-            #         break
-            # if already_recorded:
-            #     sum = 0
-            #     for play, S in moves_states:
-            #         sum += self.plays[(player, S)]
-            #     log_total = log( sum )
-            #     value, move, state = max( ((wins[(player, S)] / self.plays[(player, S)]) + self.C * sqrt(log_total / self.plays[(player, S)]), play, S)
-            #         for play, S in moves_states)
+            # #Code to general set of legal moves for this depth.
+            # #If the current state was previously visited, reuse all legal moves.
+            # if self.legal_moves_memory.__contains__(recursive_hash_object(states_so_far[-1])):
+            #     print("\nMemory works.\n")
+            #     moves_states = self.legal_moves_memory[recursive_hash_object(states_so_far[-1])]
             # else:
-            #     # if not moves_states:
-            #     #     print(state)
-            #     # Otherwise, just make an arbitrary decision.
-            #     move, state = choice(moves_states)
+            #     legal = self.board.legal_plays(states_so_far)
+            #     moves_states = [(play, self.board.next_state(state, play)) for play in legal]
+            #     self.legal_moves_memory[recursive_hash_object(states_so_far[-1])] = moves_states
 
-            move = self.board.get_random_legal_play(states_copy)
-            state = self.board.next_state(state, move)
+            # If we have stats on all of the legal moves here, use them. 
+            # TODO: Use a flag and counter to figure out if all plays have been explored.
+            if starting_move:
+                starting_move = False
+                for play, S in moves_states:
+                    already_recorded = self.plays.get( recursive_hash_object((player, S)), None )
+                    if not already_recorded:
+                        break
+                if already_recorded:
+                    sum = 0
+                    for play, S in moves_states:
+                        sum += self.plays[recursive_hash_object((player, S))]
+                    log_total = log( sum )
+                    value, move, state = max( ((self.wins[recursive_hash_object((player, S))] / self.plays[recursive_hash_object((player, S))]) + self.C * sqrt(log_total / self.plays[recursive_hash_object((player, S))]), play, S)
+                        for play, S in moves_states)
+                else:
+                    # Otherwise, just make an arbitrary decision.
+                    move, state = choice(moves_states)
+            else:
+                move = self.board.get_random_legal_play(states_so_far)
+                state = self.board.next_state(state, move)
 
-            states_copy.append(state)
+            states_so_far.append(state)
 
-            #player refers to person who made the move into state.
-            if expand and (player, state) not in self.plays:
+            #If this play hasn't been expanded, expand it. (Set stats to default 0)
+            if expand and recursive_hash_object((player, state)) not in self.plays.keys():
                 expand = False
                 self.plays[recursive_hash_object((player, state))] = 0
                 self.wins[recursive_hash_object((player, state))] = 0
-                #Logs the necessary depth to reach an unplayed move.
+                #Logs the necessary depth to reach an unplayed move. (If this is being expanded, then lower depth has already been explored.)
                 if move_counter > self.max_depth:
                     self.max_depth = move_counter
 
-            visited_states.add((player, state))
+            visited_states[recursive_hash_object((player, state))] = (player,state)
 
             player = self.board.current_player(state)
-            winner = self.board.winner(states_copy)
-            if winner < 0:  #Game hasn't finished.
+            winner = self.board.winner(states_so_far)
+            if winner > 0:  #Game has finished.
                 break
 
-        for player, state in visited_states:
-            if recursive_hash_object((player, state)) not in self.plays:
-                # print("Not")
-                continue
-            # print("It is in self.plays:")
-            self.plays[recursive_hash_object((player, state))] += 1
-            # print(self.plays)
-            if player == winner:
-                self.wins[recursive_hash_object((player, state))] += 1
+        #Update stats for expanded plays. (Only expanded are in dictionary.)
+        for player, state in visited_states.values():
+            if recursive_hash_object((player, state)) in self.plays.keys():
+                self.plays[recursive_hash_object((player, state))] += 1
+                if player == winner:
+                    self.wins[recursive_hash_object((player, state))] += 1
+
+    def __register_game(self, state:Game):
+        """Given a game state, registers it with a unique id (its hash)."""
+        id_val = hash(state)
+        if not self.id_to_game.__contains__(id_val):
+            self.id_to_game[id_val] = state

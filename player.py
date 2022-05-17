@@ -241,7 +241,7 @@ class Player():
         return list(combs)
 
     def get_random_valid_application(self, board:Gameboard) -> ApplicationLog:
-        """Randomply generate a valid ApplicationLog."""
+        """Randomly returns one valid ApplicationLog for current state."""
         #TODO: Investigate performance of maintaining a static list of possible application target and picking one randomly.
         applications:list[Application] = []
         valid_board_indexes = [i for i in list(range(0,len(board))) if i != self.colour.value]
@@ -292,13 +292,14 @@ class Player():
             if len(applications_of_type) > 1:
                 conflicts.append(applications_of_type)
 
-        #For each application list select one.
+        #For each application list select one and combine all instances.
         conflict_combinations:list[ConflictLog] = []
         depth_combinations(conflicts,[],conflict_combinations)
         
         return conflict_combinations
 
     def get_random_valid_resolution(self,board:Gameboard) -> ConflictLog:
+        """Randomly returns one valid ConflictLog for current state."""
         resolution:list[tuple[list[Application],Application]] = []
         applicants = self.palace_applicants.copy()
         if not applicants:
@@ -315,27 +316,9 @@ class Player():
                     break
             #If conflict exists, add it.
             if len(applications_of_type) > 1:
-                #Resolve external.
                 chosen_application = random.choice(applications_of_type)
                 resolution.append( (applications_of_type, chosen_application) )
                 applicants = [app for app in applicants if app not in applications_of_type]
-
-            #     #TODO: Finish get_valid_resolution implementation for internal after external.
-            #     #Resolve internal after external.
-            #     for square in board[self.colour.value]:
-            #         if square.piece:
-            #             if square.piece.type == chosen_application[0].type:
-            #                 internal_conflict = [chosen_application, (square.piece,square,0)]
-            #                 resolution.append( (internal_conflict, random.choice(internal_conflict)) )
-            # elif len(applications_of_type) == 1:
-            #     #Resolve internal if no external conflict exists.
-            #     for square in board[self.colour.value]:
-            #         if square.piece:
-            #             current_application = applications_of_type[0]
-            #             if square.piece.type == current_application[0].type:
-            #                 internal_conflict = [current_application, (square.piece,square,0)]
-            #                 resolution.append( (internal_conflict, random.choice(internal_conflict)) )
-
 
         #Applicants contains the applications with no conflicts. Applicants is local and has no further use.
         return resolution
@@ -363,7 +346,7 @@ class Player():
                     internal_conflicts.append(applications_of_type)
         
         valid_internal_combinations:list[tuple[Application,...]] = list(product(*internal_conflicts))
-        valid_internal_resolutions:list[ConflictLog] = self.generate_conflict_log(internal_conflicts, valid_internal_combinations)
+        #valid_internal_resolutions:list[ConflictLog] = self.generate_conflict_log(internal_conflicts, valid_internal_combinations)
 
         #PLACEMENTS
         valid_placements:list[PlacementLog] = []
@@ -397,6 +380,7 @@ class Player():
         return valid_placements
     
     def get_random_valid_placement(self, board:Gameboard, external_conflict_resolution:ConflictLog) -> PlacementLog:
+        """Randomly returns one valid PlacementLog for current state."""
         placements:PlacementLog = []
 
         #Remove applications that will not be placed.
@@ -526,36 +510,11 @@ class Player():
             ### AUXILARY FUNCTIONS ###
             ##########################  
 
-#Create recursive function that
-        #[a,b][c,d,e][f,g] -> to_select
-        #a -> a in selected
-        #1) combinations.add(function(selected,to_select))
-        #a,c -> c in selected
-        #2) combinations.add(function(selected,to_select))
-        #a,c,f -> f in selected
-        #3) combinations.add(function(selected,to_select))
-        #a,c,g next loop iteration: -> g in selected
-        #3) combinations.add(function(selected,to_select))
-        #a,d
-        #a,d,f
-        #a,d,g
-        #a,e
-        #a,e,f
-        #a,e,g
-        #B
-def depth_combinations(to_select:list[list[Application]], current:ConflictLog, combinations:list[ConflictLog]):
-    if not to_select:
-        #If branch is empty, append combination.
-        combinations.append(current)
-        return
-    for elem in copy.copy(to_select[0]):
-        depth_combinations(to_select[1:],current+[(to_select[0],elem)],combinations)
-
 
 Application = tuple[Piece,Square,int]
 """The Piece being sent, the Square sent to, and the bribe."""
 Gameboard = list[list[Square]]
-
+"""Representation of the gameboard where first index corresponds to player numbers and second to square numbers."""
 EarningsLog = list[Square]
 """Squares to collect earnings for this turn."""
 ConflictLog = list[tuple[list[Application], Application]]
@@ -588,6 +547,35 @@ def recursive_hash_object(element) -> int:
         sum += hash(element)
     # print(str(element),"Value:",str(sum),"No of elements in tuple:",str(counter))
     return sum
+
+#Create recursive function that
+#[a,b][c,d,e][f,g] -> to_select
+#a -> a in selected
+#1) combinations.add(function(selected,to_select))
+#a,c -> c in selected
+#2) combinations.add(function(selected,to_select))
+#a,c,f -> f in selected
+#3) combinations.add(function(selected,to_select))
+#a,c,g next loop iteration: -> g in selected
+#3) combinations.add(function(selected,to_select))
+#a,d
+#a,d,f
+#a,d,g
+#a,e
+#a,e,f
+#a,e,g
+#B
+def depth_combinations(to_select:list[list[Application]], current:ConflictLog, combinations:list[ConflictLog]):
+    """Given a list of conflicts (to_select), generates all possible combinations of picking one element from each conflict.\n
+    Given to_select, take the first conflict and goes through each element. Each element is a branch, and in each branch, 
+    recursively does the same to the next conflict."""
+
+    if not to_select:
+        #If branch is empty, append combination.
+        combinations.append(current)
+        return
+    for elem in copy.copy(to_select[0]):
+        depth_combinations(to_select[1:],current+[(to_select[0],elem)],combinations)
 
 # def app_get_piece(app:Application) -> Piece:
 #     return app[0]

@@ -1,6 +1,4 @@
 from __future__ import division
-from math import sqrt, log
-from random import choice
 import time
 from board import Board
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour
@@ -31,6 +29,6 @@ def run():
     toc = time.perf_counter()
     taken_minutes = (toc - tic)/60
     print("It has taken",taken_minutes,"minutes.")
-    print(montecarlo.plays)
+    # print(montecarlo.plays)
 
 run()

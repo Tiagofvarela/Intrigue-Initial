@@ -29,7 +29,7 @@ class Piece:
         return self.type.value*31**1+self.owner.value*31**2
 
     def __str__(self):
-        return self.__repr__()#+" Earned: "+str(0)
+        return str(self.owner.name) + " " +str(self.type.name)
         
     def __repr__(self):
         return str(self.owner.name) + " " +str(self.type.name)
