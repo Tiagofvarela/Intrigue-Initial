@@ -1,6 +1,5 @@
 #Structural basis for this program by Jeff Bradberry. https://jeffbradberry.com/posts/2015/09/intro-to-monte-carlo-tree-search/
 
-
 from __future__ import division
 import datetime
 from math import sqrt, log
@@ -8,11 +7,12 @@ from random import choice
 import time
 from board import Board, GameMove
 from intrigue import Game
+from intrigueAI import IntrigueAI
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour
 from player import Player, recursive_hash_object
 
 
-class MonteCarlo(object):
+class MonteCarlo(IntrigueAI):
     def __init__(self, board, **kwargs):#TODO: Evaluation function parameter to evaluate a final state and attribute points.
         """Takes an instance of a Board and optionally some keyword arguments. 
         Initializes the list of game states and the statistics tables."""

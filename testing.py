@@ -6,7 +6,7 @@ from board import Board
 
 from intrigue import Game
 from intrigue_datatypes import Piece_Type, Player_Colour
-from monteCarlo import MonteCarlo
+from intrigueAI_monteCarlo import MonteCarlo
 from piece import Piece
 from player import ApplicationLog, ConflictLog, EarningsLog, PlacementLog, Player, recursive_hash_object#, Application, ConflictLog, Player, app_get_piece, conflict_log_get_val, hash_ConflictLog, sort_ConflictLog
 from square import Square
