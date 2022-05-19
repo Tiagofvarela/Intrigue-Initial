@@ -145,23 +145,40 @@ class Game():
             """Given a row of squares, prints their simple strings in a line."""
             line = ""
             for square in squares:
-                line += str(square)
+                line += square.__colour_str__()
             return line
         
         board_rep = "________________________________________________________________________"
         for row in range(len(self.boards)):
             board_rep += "\n"+line_str(self.boards[row])+Player_Colour(row).name+" \nApplicants: "
             for piece, square, bribe in self.players[row].palace_applicants:
+                board_rep += str(piece)+" [Bribe "+str(bribe*1000)+"]; "
+            board_rep +="\n"
+        board_rep += "\n"
+        for p in self.players:
+            board_rep += "\n"+str(p)
+        board_rep += "\n________________________________________________________________________"
+        return board_rep
+
+    def __repr__(self):        
+        def line_str(squares:list[Square]) -> str:
+            """Given a row of squares, prints their simple strings in a line."""
+            line = ""
+            for square in squares:
+                line += str(square)
+            return line
+        
+        board_rep = "________________________________________________________________________"
+        for row in range(len(self.boards)):
+            board_rep += "\n"+line_str(self.boards[row])+Player_Colour(row).clean_name()+" \nApplicants: "
+            for piece, square, bribe in self.players[row].palace_applicants:
                 board_rep += repr(piece)+" [Bribe "+str(bribe*1000)+"]; "
             board_rep +="\n"
         board_rep += "\n"
         for p in self.players:
-            board_rep += str(p)
+            board_rep += "\n"+repr(p)
         board_rep += "\n________________________________________________________________________"
         return board_rep
-
-    def __repr__(self):
-        return self.__str__()
 
     def __hash__(self) -> int:
         #Gameboard

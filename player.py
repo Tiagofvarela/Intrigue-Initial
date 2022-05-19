@@ -502,9 +502,16 @@ class Player():
         """If two players have the same colour, they have the same hash."""
         return self.colour.value
     def __str__(self):
-        return "\n"+str(self.colour.name)+" Pieces: "+str(self.pieces)+" Money: "+str(self.money*1000)
+        def piece_list(piece_list:list[Piece]):
+            representation = "["
+            for p in self.pieces:
+                representation += str(p)+", "
+            representation = representation[:-2]
+            representation += "]"
+            return representation
+        return str(self.colour.name)+" Pieces: "+piece_list(self.pieces)+" Money: "+str(self.money*1000)
     def __repr__(self):
-        return str(self.colour)
+        return self.colour.clean_name()+" Pieces: "+repr(self.pieces)+" Money: "+str(self.money*1000)
 
             ##########################
             ### AUXILARY FUNCTIONS ###

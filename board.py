@@ -5,7 +5,7 @@
 
 import sys
 
-from intrigue import Game
+from game import Game
 from player import ApplicationLog, ConflictLog, PlacementLog, EarningsLog, Player
 
 GameMove = tuple[EarningsLog, ConflictLog, PlacementLog, ApplicationLog]

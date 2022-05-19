@@ -22,3 +22,13 @@ class Player_Colour(Enum):
     @property
     def name(self):
         return eval('Fore.'+super().name)+super().name+Style.RESET_ALL
+
+    def clean_name(self) -> str:
+        if self.value == 0:
+            return "RED"
+        elif self.value == 1:
+            return "GREEN"
+        elif self.value == 2:
+            return "BLUE"
+        else:
+            return "YELLOW"

@@ -6,7 +6,7 @@ from math import sqrt, log
 from random import choice
 import time
 from board import Board, GameMove
-from intrigue import Game
+from game import Game
 from intrigueAI import IntrigueAI
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour
 from player import Player, recursive_hash_object
@@ -16,8 +16,7 @@ class MonteCarlo(IntrigueAI):
     def __init__(self, board, **kwargs):#TODO: Evaluation function parameter to evaluate a final state and attribute points.
         """Takes an instance of a Board and optionally some keyword arguments. 
         Initializes the list of game states and the statistics tables."""
-        self.board:Board = board
-        self.states:list[Game] = []
+        super().__init__(board)
         seconds = kwargs.get('time', 30)
         self.calculation_time = datetime.timedelta(seconds=seconds)
         self.max_moves = kwargs.get('max_moves', 100)
@@ -25,15 +24,11 @@ class MonteCarlo(IntrigueAI):
         self.plays:dict[int,int] = {}
         self.C = kwargs.get('C', 1.4)
 
-        self.legal_moves_memory:dict[int,list[tuple[GameMove,Game]]] = {}
-        self.id_to_game:dict[int,Game] = {}
-        """Given a unique ID, stores the game corresponding to it. (The ID is the game's hash value.)"""
+        # self.legal_moves_memory:dict[int,list[tuple[GameMove,Game]]] = {}
+        # self.id_to_game:dict[int,Game] = {}
+        # """Given a unique ID, stores the game corresponding to it. (The ID is the game's hash value.)"""
         
         self.max_depth = 0
-
-    def update(self, state):
-        """Takes a game state, and appends it to the history."""
-        self.states.append(state)
 
     def get_play(self):
         """Causes the AI to calculate the best move from the current game state and return it."""
@@ -41,8 +36,9 @@ class MonteCarlo(IntrigueAI):
         state = self.states[-1]
         player = self.board.current_player(state)
         legal = self.board.legal_plays(self.states[:])
-        print("Round:"+str(state.turn_counter+1)+" "+Player_Colour(player).name+" Turn")
-        print("Legal moves available:",len(legal))
+        print(state)
+        print("\nRound:"+str(state.turn_counter+1)+" "+Player_Colour(player).name+" Turn\nLegal moves available: "+str(len(legal)))
+        log_info = repr(state)+"\nRound:"+str(state.turn_counter+1)+" "+Player_Colour(player).clean_name()+" Turn\nLegal moves available: "+str(len(legal))
 
         # Bail out early if there is no real choice to be made.
         if not legal:
@@ -58,14 +54,14 @@ class MonteCarlo(IntrigueAI):
             self.run_simulation(moves_states)
             games += 1
         
-        file = open("search-log.txt","a")
-
+        file = open(self.filename,"a")
+        file.write(log_info)
         # Display the number of calls of `run_simulation` and the time elapsed.
-        file.write("Plays simulated: "+str(games)+"\n")
+        file.write("\nPlays simulated: "+str(games)+"\n")
         file.write("Time spent simulating plays: "+str(datetime.datetime.utcnow() - begin)+"\n")
-
         percent_wins, move = max( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
-
+        file.write("Montecarlo move chosen:\n"+repr(move))
+        file.write("\n\nMost simulated moves:\n")
         # Display the stats for each possible play.
         for x in sorted(
             ((100 * self.wins.get(recursive_hash_object((player, S)), 0) /
@@ -76,12 +72,10 @@ class MonteCarlo(IntrigueAI):
              for p, S in moves_states),
             reverse=True
         ):
-            # percentage, wins, plays, play = x
-            # readable_play = ""
-            # for el in play[1]:
-            #     pass
-            # (play[1],play[2],play[3])
-            file.write("{3}: {0:.2f}% ({1} / {2})".format(*x)+"\n") #play: win_percentage% (wins / plays)
+            percentage, wins, plays, play = x
+            if percentage > 0 or plays > 1:
+                file.write(repr(play)+": "+str(percentage)+"% ("+str(wins)+" / "+str(plays)+")"+"\n")
+            # file.write("{3}: {0:.2f}% ({1} / {2})".format(*x)+"\n") #play: win_percentage% (wins / plays)
         file.write("Maximum depth searched: "+ str(self.max_depth)+"\n\n")
         file.close()
 
@@ -164,8 +158,8 @@ class MonteCarlo(IntrigueAI):
                 if player == winner:
                     self.wins[recursive_hash_object((player, state))] += 1
 
-    def __register_game(self, state:Game):
-        """Given a game state, registers it with a unique id (its hash)."""
-        id_val = hash(state)
-        if not self.id_to_game.__contains__(id_val):
-            self.id_to_game[id_val] = state
+    # def __register_game(self, state:Game):
+    #     """Given a game state, registers it with a unique id (its hash)."""
+    #     id_val = hash(state)
+    #     if not self.id_to_game.__contains__(id_val):
+    #         self.id_to_game[id_val] = state

@@ -4,7 +4,7 @@ from tkinter.messagebox import NO
 import unittest
 from board import Board
 
-from intrigue import Game
+from game import Game
 from intrigue_datatypes import Piece_Type, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
 from piece import Piece

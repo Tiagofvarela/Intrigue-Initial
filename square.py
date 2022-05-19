@@ -51,8 +51,12 @@ class Square:
             piece_hash = hash(self.piece)
         return self.value*31**1 + self.owner.value*32**2 + piece_hash*31**3
     def __str__(self):
+        return "|"+repr(self.piece)+"|"
+    def __colour_str__(self):
         return "|"+str(self.piece)+"|"
     def __repr__(self):
+        return "|"+repr(self.piece)+" "+self.owner.clean_name()+" "+str(self.value*1000)+"|"
+    def __colour_repr__(self):
         return "|"+str(self.piece)+" "+self.owner.name+" "+str(self.value*1000)+"|"
 
 import player
