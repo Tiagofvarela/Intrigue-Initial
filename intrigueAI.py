@@ -1,6 +1,8 @@
 from board import Board
 from game import Game
 from intrigue_datatypes import Player_Colour
+from piece import Piece
+from player import Application
 
 
 class IntrigueAI():

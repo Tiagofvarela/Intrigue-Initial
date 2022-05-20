@@ -59,6 +59,9 @@ class MonteCarlo(IntrigueAI):
         # Display the number of calls of `run_simulation` and the time elapsed.
         file.write("\nPlays simulated: "+str(games)+"\n")
         file.write("Time spent simulating plays: "+str(datetime.datetime.utcnow() - begin)+"\n")
+
+        #TODO: Change max function to introduce randomness.
+
         percent_wins, move = max( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
         file.write("Montecarlo move chosen:\n"+repr(move))
         file.write("\n\nMost simulated moves:\n")

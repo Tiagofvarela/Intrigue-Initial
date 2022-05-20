@@ -6,6 +6,7 @@ colorama.init()
 MINIMUM_BRIBE = 1
 STARTING_MONEY = 32
 PLAYER_COUNT = 4
+CHOSEN_MOVE_STRING = "Chosen move:"
 
 class Piece_Type(Enum):
     SCIENTIST = 100

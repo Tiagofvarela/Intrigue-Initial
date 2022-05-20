@@ -3,9 +3,46 @@ from io import TextIOWrapper
 import sys
 import time
 from board import Board, GameMove
+from game import Game
 from intrigueAI import IntrigueAI
-from intrigue_datatypes import PLAYER_COUNT, Player_Colour
+from intrigue_datatypes import CHOSEN_MOVE_STRING, PLAYER_COUNT, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
+from player import EarningsLog
+
+# def read_move(move_str:str) -> GameMove:
+#     line_index = 0
+#     earnings:EarningsLog = []
+
+#     while move_str[line_index] != '[':
+#         line_index += 1
+#     #Earnings Log
+#     line_index += 1
+#     #Read square
+#     if move_str[line_index] == '|':
+#         pass
+
+#     #Conflict Log
+
+#     return ([],[],[],[])
+
+# def play_from_log(gamelog_name:str):
+#     board = Board()
+#     state = board.start()
+
+#     file = open(gamelog_name)
+#     while True:
+#         line = file.readline()
+#         if not line:
+#             break
+#         if line[:-1] == CHOSEN_MOVE_STRING:
+#             gamemove = read_move(line)
+#             state = board.next_state(state, gamemove)
+#             print(state)
+#     file.close()
+#     if board.winner([state]) >= PLAYER_COUNT:
+#         print("The game was a tie.")#TODO: Establish who is tieing.
+#     else:
+#         print("Winner:",Player_Colour(board.winner([state])).name)
 
 def log_natural_language(gamelog:TextIOWrapper, play:GameMove, player_name:str):
     earnings, conflicts, placements, applications = play
@@ -49,7 +86,7 @@ def run():
     agent_AIs:list[IntrigueAI] = []
     log_counter = 1
     try:
-        for type in sys.argv[1:]:
+        for type in sys.argv[1:]:#TODO: Implement replaying command line args
             if type == "montecarlo":
                 agent_AIs.append(MonteCarlo(board, **args))
             elif type == "random":                
@@ -76,7 +113,6 @@ def run():
         exit()
 
     #TODO: Feed Game-Log to replay a game.
-    #TODO: Game-Log should have all states and plays (plays in natural language)
     #TODO: Player-Log should, depending on AI type, also write "why" something was chosen.
     open("game_log.txt", 'w').close()  
     gamelog = open("game_log.txt", 'a') 
@@ -91,8 +127,9 @@ def run():
 
     while board.winner(current_player.states) == -1:
         chosen_move = current_player.get_play()
-
-        gamelog.write("Chosen move:\n")
+        #Register move
+        gamelog.write(CHOSEN_MOVE_STRING)
+        gamelog.write("\n")
         gamelog.write(repr(chosen_move))
         gamelog.write("\n\n")
         log_natural_language(gamelog,chosen_move,Player_Colour(current_player.get_current_state().get_player_turn()).clean_name())
