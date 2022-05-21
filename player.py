@@ -277,20 +277,8 @@ class Player():
     def get_valid_resolutions(self, board:Gameboard) -> list[ConflictLog]:
         """Returns all valid conflict resolutions for this player's turn."""
 
-        conflicts:list[list[Application]] = []
-        #Check conflicts. 
-        for piece_type_int in range(100,104):
-            applications_of_type:list[Application] = self.__find_type_applications__(Piece_Type(piece_type_int), self.palace_applicants)            
-
-            #If internal conflict exists, adds them to the list of contenders.
-            for square in board[self.colour.value]:
-                if square.piece and Piece_Type(piece_type_int) == square.piece.type:
-                    applications_of_type.append( (square.piece,square,0) )
-                    break
-
-            #First save each group of conflicts. Once all are stored, start making the combinations.
-            if len(applications_of_type) > 1:
-                conflicts.append(applications_of_type)
+        #First save each group of conflicts. Once all are stored, start making the combinations.
+        conflicts = self.get_conflicts(board)
 
         #For each application list select one and combine all instances.
         conflict_combinations:list[ConflictLog] = []
@@ -321,61 +309,51 @@ class Player():
                 applicants = [app for app in applicants if app not in applications_of_type]
 
         #Applicants contains the applications with no conflicts. Applicants is local and has no further use.
-        return resolution
-        
+        return resolution 
+    
+    def get_conflicts(self, board:Gameboard) -> list[list[Application]]:
+        conflicts:list[list[Application]] = []
+        #Check conflicts. 
+        for piece_type_int in range(100,104):
+            applications_of_type:list[Application] = self.__find_type_applications__(Piece_Type(piece_type_int), self.palace_applicants)            
+
+            #If internal conflict exists, adds them to the list of contenders.
+            for square in board[self.colour.value]:
+                if square.piece and Piece_Type(piece_type_int) == square.piece.type:
+                    applications_of_type.append( (square.piece,square,0) )
+                    break
+            if len(applications_of_type) > 1:
+                conflicts.append(applications_of_type)
+        return conflicts
 
     def get_valid_placements(self, board:Gameboard, external_conflict_resolution:ConflictLog) -> list[PlacementLog]:
         """Given a ConflictLog, returns all valid PlacementLogs for that conflict resolution."""
 
-        applicants:list[Application] = self.palace_applicants.copy()   #List of valid palace applicants for this external conflict resolution.
+        internal_placements:PlacementLog = []
+        #Get placement applicants
+        applicants:list[Application] = self.palace_applicants.copy()   
         for conflict, chosen_application in external_conflict_resolution:
             applicants = [app for app in applicants if app not in conflict]
-            applicants.append(chosen_application)    
+            #Immediately register internal applications.
+            if chosen_application[1].piece:
+                if chosen_application[1].piece.type != chosen_application[0].type:
+                    raise Exception("An application to a square with a piece of a different type was detected.")
+                internal_placements.append( (chosen_application, chosen_application[1]) )
+            else:
+                applicants.append(chosen_application)    
 
-        #Generate the valid internal plays.
-        internal_conflicts:list[list[Application]] = []
-        #Check internal conflicts.
-        for board_square in board[self.colour.value]:
-            if board_square.piece:
-                applications_of_type = self.__find_type_applications__(board_square.piece.type, applicants)   
-                #There are applications of the same type as in square.  
-                if len(applications_of_type) > 0:
-                    # if len(applications_of_type) > 1:
-                    #     raise Exception(applications_of_type)
-                    applications_of_type.append( (board_square.piece,board_square,0) )  #Each list has two applications, the square app and the new one.
-                    internal_conflicts.append(applications_of_type)
-        
-        valid_internal_combinations:list[tuple[Application,...]] = list(product(*internal_conflicts))
-        #valid_internal_resolutions:list[ConflictLog] = self.generate_conflict_log(internal_conflicts, valid_internal_combinations)
-
-        #PLACEMENTS
+        #Get valid placements
         valid_placements:list[PlacementLog] = []
         empty_squares = [square for square in board[self.colour.value] if not square.piece]
-        
-        #Internal applications are forcibly placed.
-        forced_placement:PlacementLog = []
-        for app in applicants:
-            occupied_squares = [square for square in board[self.colour.value] if square.piece]
-            # print(occupied_squares)
-            for square in occupied_squares:
-                assert square.piece
-                if app[0].type == square.piece.type:
-                    #square.piece = app[0]
-                    forced_placement.append( (app, square) )
-                    break
-        for app1, square in forced_placement:
-            # print(applicants)
-            # print(app1)
-            applicants.remove(app1)
         
         #Each permutation has ordered squares in different orders. Ordered applicants receive a square in this order.
         for permutation in permutations(empty_squares, len(applicants)):
             placement:PlacementLog = []
             square_list = list(permutation)
             for app in applicants:
-                placement.append( (app, square_list.pop()) )  
+                placement.append( (app, square_list.pop()) )
 
-            valid_placements.append(placement+forced_placement)          
+            valid_placements.append(placement+internal_placements)   
         
         return valid_placements
     

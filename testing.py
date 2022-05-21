@@ -412,7 +412,7 @@ class TestPlayer(unittest.TestCase):
             self.assertEqual(test_hashes[1], test_hashes[i])
             i += 1
 
-        self.assertTrue(len(found_placement_log) == len(expected_valid_placements))
+        self.assertEqual(len(expected_valid_placements) , len(found_placement_log))
         self.assertEqual(recursive_hash_object(expected_valid_placements), recursive_hash_object(found_placement_log))
         # for placement in found_placement_log:
         #     self.assertIn(placement, expected_valid_placements)
@@ -774,43 +774,43 @@ class TestGame(unittest.TestCase):
         # found_conflict_logs = red.get_valid_resolutions2(game.boards)
         # found_placement_logs = red.get_valid_placements(game.boards, conflict_log)
 
-    def test_run_simulation(self):
-        print()
-        #Set up game board.
-        board = Board()
-        #Parameters (not used in simulation)
-        args = {'time':1,'max_moves':120,'C':1.3}
-        #Set up montecarlo.
-        open('search-log.txt', 'w').close()
-        montecarlo = MonteCarlo(board, **args)
-        montecarlo.update(board.start())
+    # def test_run_simulation(self):
+    #     print()
+    #     #Set up game board.
+    #     board = Board()
+    #     #Parameters (not used in simulation)
+    #     args = {'time':1,'max_moves':120,'C':1.3}
+    #     #Set up montecarlo.
+    #     open('search-log.txt', 'w').close()
+    #     montecarlo = MonteCarlo(board, **args)
+    #     montecarlo.update(board.start())
 
-        ### One Simulation ###
+    #     ### One Simulation ###
 
-        print("Plays before: ",list(montecarlo.plays.values()))
-        print("Wins before: ",list(montecarlo.wins.values()))
-        tic = time.perf_counter()
-        #Play a simulation.
-        montecarlo.run_simulation()
-        toc = time.perf_counter()
-        print("Plays after: ",list(montecarlo.plays.values()))
-        print("Wins after: ",list(montecarlo.wins.values()))
+    #     print("Plays before: ",list(montecarlo.plays.values()))
+    #     print("Wins before: ",list(montecarlo.wins.values()))
+    #     tic = time.perf_counter()
+    #     #Play a simulation.
+    #     montecarlo.run_simulation()
+    #     toc = time.perf_counter()
+    #     print("Plays after: ",list(montecarlo.plays.values()))
+    #     print("Wins after: ",list(montecarlo.wins.values()))
 
-        taken_seconds = (toc - tic)
-        print("It has taken",taken_seconds,"seconds.")
+    #     taken_seconds = (toc - tic)
+    #     print("It has taken",taken_seconds,"seconds.")
 
-        ### Simulate and test Plays ###       
-        # print("Plays before: ",list(montecarlo.plays.values()))
-        # print("Wins before: ",list(montecarlo.wins.values()))
+    #     ### Simulate and test Plays ###       
+    #     # print("Plays before: ",list(montecarlo.plays.values()))
+    #     # print("Wins before: ",list(montecarlo.wins.values()))
 
-        # while 2 not in set(montecarlo.plays.values()):
-        #     montecarlo.run_simulation()
-        #     # print(set(montecarlo.plays.values()))
+    #     # while 2 not in set(montecarlo.plays.values()):
+    #     #     montecarlo.run_simulation()
+    #     #     # print(set(montecarlo.plays.values()))
         
-        # print("Plays after: ",list(montecarlo.plays.values()))
-        # print("Wins after: ",list(montecarlo.wins.values()))
+    #     # print("Plays after: ",list(montecarlo.plays.values()))
+    #     # print("Wins after: ",list(montecarlo.wins.values()))
 
-        print()
+    #     print()
 
         
         
