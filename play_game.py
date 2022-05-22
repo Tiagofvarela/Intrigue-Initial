@@ -1,10 +1,12 @@
 from __future__ import division
+import datetime
 from io import TextIOWrapper
 import sys
 import time
 from board import Board, GameMove
 from game import Game
 from intrigueAI import IntrigueAI
+from intrigueAI_human import Human
 from intrigue_datatypes import CHOSEN_MOVE_STRING, PLAYER_COUNT, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
 from player import EarningsLog
@@ -76,31 +78,55 @@ def log_natural_language(gamelog:TextIOWrapper, play:GameMove, player_name:str):
             gamelog.write(player_name+" has sent "+repr(piece)+" to "+repr(square)+" with a bribe of "+str(bribe*1000))
             gamelog.write("\n")
 
+def is_float(string:str) -> bool:
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
 def run():
     #Set up game board.
     board = Board()
-    #Montecarlo Parameters
-    args = {'time':30,'max_moves':120,'C':1.4}
-
+    #Parameters
+    args = {'time':15,'max_moves':120,'C':1.4}
+    number_of_games = 1
+    
     #Generate intrigue agents.
     agent_AIs:list[IntrigueAI] = []
-    log_counter = 1
+    argument_counter = 1
     try:
-        for type in sys.argv[1:]:#TODO: Implement replaying command line args
-            if type == "montecarlo":
+        for arg in sys.argv[1:]:
+            if str.isdigit(arg):
+                #Number of games
+                if argument_counter == 1:
+                    number_of_games = int(arg)
+                #Montecarlo thinking time
+                elif isinstance(agent_AIs[-1], MonteCarlo):
+                    agent_AIs[-1].calculation_time = datetime.timedelta(seconds=int(arg))
+                else:
+                    raise Exception("This agent type does not receive int arguments.")
+            #Constant
+            elif is_float(arg):
+                if isinstance(agent_AIs[-1], MonteCarlo):
+                    agent_AIs[-1].C = float(arg)
+                else:
+                    raise Exception("This agent type does not receive float arguments.")
+            elif arg == "montecarlo":
                 agent_AIs.append(MonteCarlo(board, **args))
-            elif type == "random":                
+            elif arg == "random":                
                 agent_AIs.append(IntrigueAI(board))
-            elif type == "human":
-                pass #TODO: Implement human functionality.
+            elif arg == "human":
+                agent_AIs.append(Human(board))
             else:
                 raise AttributeError()
             #Set up text log.
-            file_name = "player"+str(log_counter)+"-log.txt"
+            file_name = "player"+str( len(agent_AIs) )+"-log.txt"
             open(file_name, 'w').close()   
-            log_counter += 1   
             agent_AIs[-1].update_file_name(filename=file_name)
             agent_AIs[-1].update(board.start())
+
+            argument_counter += 1   
         if len(agent_AIs) < 4:
             raise Exception("Not enough player types indicated.")   
     except AttributeError as e:
@@ -110,6 +136,8 @@ def run():
         print("\nError:",e.args[0])
         print("Please indicate four player types by writing four type names separated by spaces. Ex:")
         print("montecarlo montecarlo random random")
+        print("Montecarlo instances have optional 'calculation_time' (integer) and 'constant C' (decimal) arguments. Ex:")
+        print("montecarlo 20 1.5 montecarlo 1.2 montecarlo montecarlo 6")
         exit()
 
     #TODO: Feed Game-Log to replay a game.
