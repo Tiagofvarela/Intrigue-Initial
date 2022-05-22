@@ -329,33 +329,37 @@ class Player():
     def get_valid_placements(self, board:Gameboard, external_conflict_resolution:ConflictLog) -> list[PlacementLog]:
         """Given a ConflictLog, returns all valid PlacementLogs for that conflict resolution."""
 
-        internal_placements:PlacementLog = []
-        #Get placement applicants
-        applicants:list[Application] = self.palace_applicants.copy()   
-        for conflict, chosen_application in external_conflict_resolution:
-            applicants = [app for app in applicants if app not in conflict]
-            #Immediately register internal applications.
-            if chosen_application[1].piece:
-                if chosen_application[1].piece.type != chosen_application[0].type:
-                    raise Exception("An application to a square with a piece of a different type was detected.")
-                internal_placements.append( (chosen_application, chosen_application[1]) )
-            else:
-                applicants.append(chosen_application)    
+        internal_placements, applications_to_place = self.get_applications_to_place(external_conflict_resolution)    
 
         #Get valid placements
         valid_placements:list[PlacementLog] = []
         empty_squares = [square for square in board[self.colour.value] if not square.piece]
         
         #Each permutation has ordered squares in different orders. Ordered applicants receive a square in this order.
-        for permutation in permutations(empty_squares, len(applicants)):
+        for permutation in permutations(empty_squares, len(applications_to_place)):
             placement:PlacementLog = []
             square_list = list(permutation)
-            for app in applicants:
+            for app in applications_to_place:
                 placement.append( (app, square_list.pop()) )
-
             valid_placements.append(placement+internal_placements)   
         
         return valid_placements
+
+    def get_applications_to_place(self, external_conflict_resolution:ConflictLog) -> tuple[PlacementLog, list[Application]]:
+        """Returns the internal placements detected, and the list of pieces yet to place."""
+        internal_placements:PlacementLog = []
+        #Get placement applicants
+        pieces_to_place:list[Application] = self.palace_applicants.copy()   
+        for conflict, chosen_application in external_conflict_resolution:
+            pieces_to_place = [app for app in pieces_to_place if app not in conflict]
+            #Immediately register internal applications.
+            if chosen_application[1].piece:
+                if chosen_application[1].piece.type != chosen_application[0].type:
+                    raise Exception("An application to a square with a piece of a different type was detected.")
+                internal_placements.append( (chosen_application, chosen_application[1]) )
+            else:
+                pieces_to_place.append(chosen_application)
+        return internal_placements,pieces_to_place
     
     def get_random_valid_placement(self, board:Gameboard, external_conflict_resolution:ConflictLog) -> PlacementLog:
         """Randomly returns one valid PlacementLog for current state."""
