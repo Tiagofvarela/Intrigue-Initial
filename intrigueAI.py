@@ -21,10 +21,6 @@ class IntrigueAI():
         # file.write(repr(self.states[-1])+"\n")
         # file.close()
 
-    def update_file_name(self, filename:str):
-        """Saves the filename to which to write the logs."""
-        self.filename = filename
-
     def get_play(self):
         """Returns a play for the current state. (Default: Random)\nUpdates log accordingly."""
         file = open(self.filename,"a")

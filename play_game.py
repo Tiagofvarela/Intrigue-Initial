@@ -97,21 +97,24 @@ def run():
     argument_counter = 1
     try:
         for arg in sys.argv[1:]:
+            print(arg)
             if str.isdigit(arg):
                 #Number of games
                 if argument_counter == 1:
-                    number_of_games = int(arg)
+                    number_of_games = max(int(arg),1)
                 #Montecarlo thinking time
                 elif isinstance(agent_AIs[-1], MonteCarlo):
                     agent_AIs[-1].calculation_time = datetime.timedelta(seconds=int(arg))
                 else:
                     raise Exception("This agent type does not receive int arguments.")
+                continue
             #Constant
             elif is_float(arg):
                 if isinstance(agent_AIs[-1], MonteCarlo):
                     agent_AIs[-1].C = float(arg)
                 else:
                     raise Exception("This agent type does not receive float arguments.")
+                continue
             elif arg == "montecarlo":
                 agent_AIs.append(MonteCarlo(board, **args))
             elif arg == "random":                
@@ -120,12 +123,6 @@ def run():
                 agent_AIs.append(Human(board))
             else:
                 raise AttributeError()
-            #Set up text log.
-            file_name = "player"+str( len(agent_AIs) )+"-log.txt"
-            open(file_name, 'w').close()   
-            agent_AIs[-1].update_file_name(filename=file_name)
-            agent_AIs[-1].update(board.start())
-
             argument_counter += 1   
         if len(agent_AIs) < 4:
             raise Exception("Not enough player types indicated.")   
@@ -142,48 +139,63 @@ def run():
 
     #TODO: Feed Game-Log to replay a game.
     #TODO: Player-Log should, depending on AI type, also write "why" something was chosen.
-    open("game_log.txt", 'w').close()  
-    gamelog = open("game_log.txt", 'a') 
 
-    tic = time.perf_counter()
-    #Play game to completion for all players.
-    current_player = agent_AIs[board.current_player(board.start())]
+    game_counter = 0
+    wins_tally:list[int] = [0,0,0,0]
+    while game_counter < number_of_games:
+        game_counter += 1
+        #Initialise logs and players.
+        open(str(game_counter)+"_game_log.txt", 'w').close()  
+        gamelog = open(str(game_counter)+"_game_log.txt", 'a') 
+        for i in range(len(agent_AIs)):
+            file_name = str(game_counter)+"_player"+str(i)+"-log.txt"
+            open(file_name, 'w').close()  
+            agent_AIs[i].filename = file_name
+            agent_AIs[i].update(board.start())
 
-    gamelog.write(repr(current_player.states[-1]))
-    gamelog.write("\n")
-    gamelog.write("Round 1: "+str(Player_Colour(0).clean_name())+" turn\n")
+        tic = time.perf_counter()
+        #Play game to completion for all players.
+        current_player = agent_AIs[board.current_player(board.start())]
 
-    while board.winner(current_player.states) == -1:
-        chosen_move = current_player.get_play()
-        #Register move
-        gamelog.write(CHOSEN_MOVE_STRING)
+        gamelog.write(repr(current_player.states[-1]))
         gamelog.write("\n")
-        gamelog.write(repr(chosen_move))
-        gamelog.write("\n\n")
-        log_natural_language(gamelog,chosen_move,Player_Colour(current_player.get_current_state().get_player_turn()).clean_name())
+        gamelog.write("Round 1: "+str(Player_Colour(0).clean_name())+" turn\n")
 
-        next_state = board.next_state(current_player.get_current_state(), chosen_move)
-        print(next_state)
-        for ai in agent_AIs:
-            ai.update(next_state)
-        current_player_id = board.current_player(next_state)
-        current_player = agent_AIs[current_player_id]
+        while board.winner(current_player.states) == -1:
+            chosen_move = current_player.get_play()
+            #Register move
+            gamelog.write(CHOSEN_MOVE_STRING)
+            gamelog.write("\n")
+            gamelog.write(repr(chosen_move))
+            gamelog.write("\n\n")
+            log_natural_language(gamelog,chosen_move,Player_Colour(current_player.get_current_state().get_player_turn()).clean_name())
 
-        gamelog.write(repr(next_state))
-        gamelog.write("\n")
-        gamelog.write("Round "+str(next_state.turn_counter+1)+": "+str(Player_Colour(current_player_id).clean_name())+" turn\n")
+            next_state = board.next_state(current_player.get_current_state(), chosen_move)
+            print(next_state)
+            for ai in agent_AIs:
+                ai.update(next_state)
+            current_player_id = board.current_player(next_state)
+            current_player = agent_AIs[current_player_id]
 
-    if board.winner(current_player.states) >= PLAYER_COUNT:
-        print("The game was a tie.")#TODO: Establish who is tieing.
-        gamelog.write("The game was a tie.")
-    else:
-        print("Winner:",Player_Colour(board.winner(current_player.states)).name)
-        gamelog.write("Winner: "+str(Player_Colour(board.winner(current_player.states)).clean_name()))
-    toc = time.perf_counter()
-    taken_minutes = (toc - tic)/60
-    print("It has taken",taken_minutes,"minutes.")
-    gamelog.write("It has taken"+str(taken_minutes)+"minutes.")
-    # print(montecarlo.plays)
-    gamelog.close()
+            gamelog.write(repr(next_state))
+            gamelog.write("\n")
+            gamelog.write("Round "+str(next_state.turn_counter+1)+": "+str(Player_Colour(current_player_id).clean_name())+" turn\n")
+
+        if board.winner(current_player.states) >= PLAYER_COUNT:
+            print("The game was a tie.")#TODO: Establish who is tieing.
+            gamelog.write("The game was a tie.")
+        else:
+            winner_int = board.winner(current_player.states)
+            print("Winner:",Player_Colour(winner_int).name)
+            gamelog.write("Winner: "+str(Player_Colour(winner_int).clean_name()))
+            wins_tally[winner_int] += 1
+        toc = time.perf_counter()
+        taken_minutes = (toc - tic)/60
+        print("It has taken",taken_minutes,"minutes.")
+        gamelog.write("It has taken "+str(taken_minutes)+" minutes.")
+        # print(montecarlo.plays)
+        gamelog.close()
+    for i in range(len(wins_tally)):
+        print(Player_Colour(i).name+" won "+str(wins_tally[i])+" times.")
 
 run()
