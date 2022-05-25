@@ -4,6 +4,7 @@ from __future__ import division
 import datetime
 from math import sqrt, log
 from random import choice
+import random
 import time
 from board import Board, GameMove
 from game import Game
@@ -11,6 +12,17 @@ from intrigueAI import IntrigueAI
 from intrigue_datatypes import PLAYER_COUNT, Player_Colour
 from player import Player, recursive_hash_object
 
+
+def random_max_tuple(tuple_list):
+    max_tuples = []
+    max_val = -1
+    for tuple in tuple_list:
+        if tuple[0] > max_val:
+            max_val = tuple[0]
+            max_tuples = [tuple]
+        elif tuple[0] == max_val:
+            max_tuples.append(tuple)
+    return random.choice(max_tuples)
 
 class MonteCarlo(IntrigueAI):
     def __init__(self, board, **kwargs):#TODO: Evaluation function parameter to evaluate a final state and attribute points.
@@ -62,7 +74,7 @@ class MonteCarlo(IntrigueAI):
 
         #TODO: Change max function to introduce randomness.
 
-        percent_wins, move = max( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
+        percent_wins, move = random_max_tuple( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
         file.write("Montecarlo move chosen:\n"+repr(move))
         file.write("\n\nMost simulated moves:\n")
         # Display the stats for each possible play.
@@ -127,7 +139,7 @@ class MonteCarlo(IntrigueAI):
                     for play, S in moves_states:
                         sum += self.plays[recursive_hash_object((player, S))]
                     log_total = log( sum )
-                    value, move, state = max( ((self.wins[recursive_hash_object((player, S))] / self.plays[recursive_hash_object((player, S))]) + self.C * sqrt(log_total / self.plays[recursive_hash_object((player, S))]), play, S)
+                    percent, move, state = random_max_tuple( ((self.wins[recursive_hash_object((player, S))] / self.plays[recursive_hash_object((player, S))]) + self.C * sqrt(log_total / self.plays[recursive_hash_object((player, S))]), play, S)
                         for play, S in moves_states)
                 else:
                     # Otherwise, just make an arbitrary decision.
