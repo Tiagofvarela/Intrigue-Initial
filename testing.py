@@ -667,6 +667,19 @@ class TestPlayer(unittest.TestCase):
             i += 1
         self.assertEqual(sorted(hashed_expected_resolutions), sorted(list(hashed_found_resolutions)))
 
+    def test_get_ordered_players(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red.money = 12
+        green.money = 17
+        blue.money = 9
+        yellow.money = 13
+        self.assertEqual([green,yellow,red,blue],game.get_ordered_players())
+        yellow.money = 12
+
+        order = game.get_ordered_players()
+        self.assertTrue( order[0] == green and order[1].money == order[2].money and order[-1] == blue )
+
 class TestGame(unittest.TestCase):
     def test_play_game(self):
         game = Game()

@@ -74,24 +74,19 @@ class Game():
         state.__play_move(play)
         return state
 
-    def get_winner(self) -> int:
-        "Return value of the winning player, or -1if it's not ended."
+    def get_winner(self) -> tuple[int, list[Player]]:
+        "Return value of the winning player, or -1 if it's not ended."
         if self.turn_counter < 20:
-            return -1
-        #TODO: Detect who is tying.
-        winner = self.players[0]
-        max_money = self.players[0].money
-        tie = False
-        for player in self.players:
-            if player.money == max_money:
-                tie = True
-            if player.money > max_money:
-                tie = False
-                winner = player
-                max_money = player.money
-        if tie:
-            return PLAYER_COUNT+1
-        return winner.colour.value
+            return -1, []
+        ordered_players = self.get_ordered_players()
+        winners = [p for p in ordered_players if p.money == ordered_players[0]]
+        if len(winners) > 1:
+            return PLAYER_COUNT+1, winners
+        return ordered_players[0].colour.value, winners
+
+    def get_ordered_players(self):
+        """Returns the players in descending order of money."""
+        return sorted(self.players, key=lambda p : p.money, reverse=True)
 
     def __play_move(self, play:tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]) -> None:
         """Applies the play to the current state."""

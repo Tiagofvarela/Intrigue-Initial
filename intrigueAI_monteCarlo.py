@@ -14,18 +14,25 @@ from player import Player, recursive_hash_object
 
 
 def random_max_tuple(tuple_list):
-    max_tuples = []
-    max_val = -1
-    for tuple in tuple_list:
-        if tuple[0] > max_val:
-            max_val = tuple[0]
-            max_tuples = [tuple]
-        elif tuple[0] == max_val:
-            max_tuples.append(tuple)
+    tuple_list:list[tuple[int,...]] = list(tuple_list)
+    max_tuples = [tuple_list[0]]
+    max_val = tuple_list[0][0]
+    for i in range(1,len(tuple_list)):
+        if tuple_list[i][0] > max_val:
+            max_val = tuple_list[i][0]
+            max_tuples = [tuple_list[i]]
+        elif tuple_list[i][0] == max_val:
+            max_tuples.append(tuple_list[i])
     return random.choice(max_tuples)
 
+def eval_greedy(player:int, state:Game):
+    """Returns the difference between the player's money and the second player's money."""
+    vals = sorted([p.money for p in state.players])
+    return state.players[player].money - vals[1]
+
+#TODO: Create "evaluation filter" for legal plays to bias montecarlo agents.
 class MonteCarlo(IntrigueAI):
-    def __init__(self, board, **kwargs):#TODO: Evaluation function parameter to evaluate a final state and attribute points.
+    def __init__(self, board, **kwargs):
         """Takes an instance of a Board and optionally some keyword arguments. 
         Initializes the list of game states and the statistics tables."""
         super().__init__(board)
@@ -39,8 +46,14 @@ class MonteCarlo(IntrigueAI):
         # self.legal_moves_memory:dict[int,list[tuple[GameMove,Game]]] = {}
         # self.id_to_game:dict[int,Game] = {}
         # """Given a unique ID, stores the game corresponding to it. (The ID is the game's hash value.)"""
+
+        self.eval_function = None
         
         self.max_depth = 0
+
+    def set_eval_function(self, function_type:str):
+        if function_type == 'g':
+            self.eval_function = eval_greedy
 
     def get_play(self):
         """Causes the AI to calculate the best move from the current game state and return it."""
@@ -62,7 +75,7 @@ class MonteCarlo(IntrigueAI):
 
         games = 0
         begin = datetime.datetime.utcnow()
-        while datetime.datetime.utcnow() - begin < self.calculation_time:
+        while datetime.datetime.utcnow() - begin < min(self.calculation_time, datetime.timedelta(len(legal)/20) if len(legal) < 200 else self.calculation_time ):
             self.run_simulation(moves_states)
             games += 1
         
@@ -71,8 +84,6 @@ class MonteCarlo(IntrigueAI):
         # Display the number of calls of `run_simulation` and the time elapsed.
         file.write("\nPlays simulated: "+str(games)+"\n")
         file.write("Time spent simulating plays: "+str(datetime.datetime.utcnow() - begin)+"\n")
-
-        #TODO: Change max function to introduce randomness.
 
         percent_wins, move = random_max_tuple( (self.wins.get(recursive_hash_object((player, S)), 0) / self.plays.get(recursive_hash_object((player, S)), 1), play) for play, S in moves_states)
         file.write("Montecarlo move chosen:\n"+repr(move))
@@ -162,15 +173,17 @@ class MonteCarlo(IntrigueAI):
             visited_states[recursive_hash_object((player, state))] = (player,state)
 
             player = self.board.current_player(state)
-            winner = self.board.winner(states_so_far)
-            if winner > 0:  #Game has finished.
+            winner_int, winners = self.board.winner(states_so_far)
+            if winner_int >= 0:  #Game has finished.
                 break
 
         #Update stats for expanded plays. (Only expanded are in dictionary.)
         for player, state in visited_states.values():
             if recursive_hash_object((player, state)) in self.plays.keys():
                 self.plays[recursive_hash_object((player, state))] += 1
-                if player == winner:
+                if self.eval_function:
+                    self.wins[recursive_hash_object((player, state))] += self.eval_function( player, state )
+                elif player == winner_int:
                     self.wins[recursive_hash_object((player, state))] += 1
 
     # def __register_game(self, state:Game):

@@ -11,6 +11,9 @@ from intrigue_datatypes import CHOSEN_MOVE_STRING, PLAYER_COUNT, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
 from player import EarningsLog
 
+PLATFORM_LOG_PATH = "platform-log.txt"
+GAME_LOG_PATH = "_game_log.txt"
+
 # def read_move(move_str:str) -> GameMove:
 #     line_index = 0
 #     earnings:EarningsLog = []
@@ -52,7 +55,7 @@ def log_natural_language(gamelog:TextIOWrapper, play:GameMove, player_name:str):
         gamelog.write("Earnings:\n")
         #Earnings
         for square in earnings:
-            gamelog.write(player_name+" has collected "+str(square.value)+" from "+repr(square))
+            gamelog.write(player_name+" has collected "+str(square.value*1000)+" from "+repr(square))
             gamelog.write("\n")
     if conflicts:
         gamelog.write("Conflicts:\n")    
@@ -89,7 +92,7 @@ def run():
     #Set up game board.
     board = Board()
     #Parameters
-    args = {'time':15,'max_moves':120,'C':1.4}
+    default_montecarlo_args = {'time':15,'max_moves':120,'C':1.4}
     number_of_games = 1
     
     #Generate intrigue agents.
@@ -98,43 +101,50 @@ def run():
     try:
         for arg in sys.argv[1:]:
             print(arg)
-            if str.isdigit(arg):
-                #Number of games
-                if argument_counter == 1:
-                    number_of_games = max(int(arg),1)
+            #Number of games
+            if argument_counter == 1 and str.isdigit(arg):
+                number_of_games = max(int(arg),1)
+            elif arg[0] == '-':   #Optional argument.
+                optional_arg = arg[1:]
                 #Montecarlo thinking time
-                elif isinstance(agent_AIs[-1], MonteCarlo):
-                    agent_AIs[-1].calculation_time = datetime.timedelta(seconds=int(arg))
-                else:
-                    raise Exception("This agent type does not receive int arguments.")
-                continue
-            #Constant
-            elif is_float(arg):
-                if isinstance(agent_AIs[-1], MonteCarlo):
-                    agent_AIs[-1].C = float(arg)
-                else:
-                    raise Exception("This agent type does not receive float arguments.")
-                continue
+                if str.isdigit(arg):
+                    if isinstance(agent_AIs[-1], MonteCarlo):
+                        agent_AIs[-1].calculation_time = datetime.timedelta(seconds=int(optional_arg))
+                    else:
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive int arguments.")                    
+                #Constant
+                elif is_float(optional_arg):
+                    if isinstance(agent_AIs[-1], MonteCarlo):
+                        agent_AIs[-1].C = float(optional_arg)
+                    else:
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive float arguments.")                    
+                #Eval function
+                elif optional_arg == 'g':
+                    if isinstance(agent_AIs[-1], MonteCarlo):
+                        agent_AIs[-1].set_eval_function(optional_arg)
+                    else:
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive the argument -g.")    
             elif arg == "montecarlo":
-                agent_AIs.append(MonteCarlo(board, **args))
+                agent_AIs.append(MonteCarlo(board, **default_montecarlo_args))
             elif arg == "random":                
                 agent_AIs.append(IntrigueAI(board))
             elif arg == "human":
                 agent_AIs.append(Human(board))
             else:
                 raise AttributeError()
-            argument_counter += 1   
+            argument_counter += 1 
         if len(agent_AIs) < 4:
-            raise Exception("Not enough player types indicated.")   
+            raise IndexError("Not enough player types indicated.")     
     except AttributeError as e:
         print("\nError: The given type of player does not exist.")
         exit()
-    except Exception as e:
+    except IndexError as e:
         print("\nError:",e.args[0])
         print("Please indicate four player types by writing four type names separated by spaces. Ex:")
         print("montecarlo montecarlo random random")
+        # print("Write '.\play_game.py help' for descriptions of all available options.")
         print("Montecarlo instances have optional 'calculation_time' (integer) and 'constant C' (decimal) arguments. Ex:")
-        print("montecarlo 20 1.5 montecarlo 1.2 montecarlo montecarlo 6")
+        print("montecarlo -20 -1.5 -g montecarlo -1.2 montecarlo montecarlo -6")
         exit()
 
     #TODO: Feed Game-Log to replay a game.
@@ -142,11 +152,20 @@ def run():
 
     game_counter = 0
     wins_tally:list[int] = [0,0,0,0]
+    #platform-log
+    try:
+        platform_log = open(PLATFORM_LOG_PATH,'a')
+    except OSError as e:
+        platform_log = open(PLATFORM_LOG_PATH,'w')
+    platform_log.write(str(sys.argv))
+    platform_log.write("\n\n")
+    platform_log.close()
+
     while game_counter < number_of_games:
         game_counter += 1
         #Initialise logs and players.
-        open(str(game_counter)+"_game_log.txt", 'w').close()  
-        gamelog = open(str(game_counter)+"_game_log.txt", 'a') 
+        open(str(game_counter)+GAME_LOG_PATH, 'w').close()  
+        gamelog = open(str(game_counter)+GAME_LOG_PATH, 'a') 
         for i in range(len(agent_AIs)):
             file_name = str(game_counter)+"_player"+str(i)+"-log.txt"
             open(file_name, 'w').close()  
@@ -161,7 +180,7 @@ def run():
         gamelog.write("\n")
         gamelog.write("Round 1: "+str(Player_Colour(0).clean_name())+" turn\n")
 
-        while board.winner(current_player.states) == -1:
+        while board.winner(current_player.states)[0] == -1:
             chosen_move = current_player.get_play()
             #Register move
             gamelog.write(CHOSEN_MOVE_STRING)
@@ -180,12 +199,14 @@ def run():
             gamelog.write(repr(next_state))
             gamelog.write("\n")
             gamelog.write("Round "+str(next_state.turn_counter+1)+": "+str(Player_Colour(current_player_id).clean_name())+" turn\n")
-
-        if board.winner(current_player.states) >= PLAYER_COUNT:
-            print("The game was a tie.")#TODO: Establish who is tieing.
-            gamelog.write("The game was a tie.")
+            
+        winner_int, winners = board.winner(current_player.states)
+        if winner_int >= PLAYER_COUNT:
+            print("The game was a tie:"+repr(winners))
+            gamelog.write("The game was a tie:"+str(winners))
+            for winner in winners:
+                wins_tally[winner.colour.value] += 1
         else:
-            winner_int = board.winner(current_player.states)
             print("Winner:",Player_Colour(winner_int).name)
             gamelog.write("Winner: "+str(Player_Colour(winner_int).clean_name()))
             wins_tally[winner_int] += 1
@@ -195,7 +216,12 @@ def run():
         gamelog.write("It has taken "+str(taken_minutes)+" minutes.")
         # print(montecarlo.plays)
         gamelog.close()
+
+    platform_log = open(PLATFORM_LOG_PATH,'a')
     for i in range(len(wins_tally)):
         print(Player_Colour(i).name+" won "+str(wins_tally[i])+" times.")
+        platform_log.write(Player_Colour(i).clean_name()+" won "+str(wins_tally[i])+" times.\n")
+    platform_log.write("--------------------------------------------\n\n")
+    platform_log.close()
 
 run()
