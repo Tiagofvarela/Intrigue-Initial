@@ -5,7 +5,11 @@ import unittest
 from board import Board
 
 from game import Game
-from intrigue_datatypes import Piece_Type, Player_Colour
+from intrigueAI import IntrigueAI
+from intrigueAI_greedy import Greedy
+from intrigueAI_honest import Honest
+from intrigueAI_titForTat import TitForTat
+from intrigue_datatypes import MINIMUM_BRIBE, Piece_Type, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
 from piece import Piece
 from player import ApplicationLog, ConflictLog, EarningsLog, PlacementLog, Player, recursive_hash_object#, Application, ConflictLog, Player, app_get_piece, conflict_log_get_val, hash_ConflictLog, sort_ConflictLog
@@ -16,6 +20,95 @@ def set_piece(player, index, square):
     "Sets the piece at the given index in the given square."
     square.piece = player.pieces[index]
     player.pieces.remove(player.pieces[index])
+
+class TestIntrigueAI(unittest.TestCase):
+
+    def test_rank_application(self):
+        game = Game()
+        red,green,blue,yellow = game.players
+        red_squares,green_squares,blue_squares,yellow_squares = game.boards
+
+        #No valid moves
+        for square in red_squares:
+            set_piece(green, len(green.pieces)-1, square)
+            green.pieces.pop()
+        for square in green_squares:
+            set_piece(blue, len(blue.pieces)-1, square)
+            blue.pieces.pop()
+        for square in blue_squares:
+            set_piece(yellow, len(yellow.pieces)-1, square)
+            yellow.pieces.pop()
+        for square in yellow_squares:
+            set_piece(red, len(red.pieces)-1, square)
+            red.pieces.pop()
+
+        red_squares[0].piece = None
+        green_squares[0].piece = None
+        blue_squares[0].piece = None
+        yellow_squares[0].piece = None
+
+        #Combination of multiple valid moves.
+
+        # |None||GREEN Priest|  |GREEN Doctor|  |GREEN Scientist|   RED 
+        # |None||BLUE Priest|   |BLUE Doctor|   |BLUE Scientist|    GREEN 
+        # |None||YELLOW Priest| |YELLOW Doctor| |YELLOW Scientist|  BLUE 
+        # |None||RED Priest|    |RED Doctor|    |RED Scientist|     YELLOW 
+        # print(game.boards)
+        
+        # a1 = (blue.pieces[0], red_squares[0], 0)
+        # a2 = (blue.pieces[0], green_squares[0], 0)
+        # a3 = (blue.pieces[0], yellow_squares[0], 0)
+        # a4 = (blue.pieces[1], red_squares[2], 0)
+        # # a5 = (blue.pieces[1], green_squares[2], 0)  #INVALID
+        # a6 = (blue.pieces[1], yellow_squares[2], 0)
+
+        #SETUP 
+        game.turn_counter = 2
+        blue.pieces = [Piece(Player_Colour.BLUE, Piece_Type.CLERK), Piece(Player_Colour.BLUE, Piece_Type.DOCTOR)]        
+
+        board = Board()
+        honest = Honest(board)
+        honest.update(game)
+
+        print("\nHonest:")
+        priority = None
+        #For honest, all applications to send are equally rated, and at least fair value is sent for each.
+        for app in blue.get_valid_applications_list(game.boards,honest.decide_bribe):
+            new_priority = honest.eval_application(app)
+            if priority:
+                self.assertAlmostEqual(priority, new_priority, delta=0.00001)
+            self.assertGreaterEqual(app[2], app[1].value)
+            print( repr(app)+" : "+str(honest.eval_application(app)) )
+            priority = new_priority
+
+        greedy = Greedy(board)
+        greedy.update(game)
+        print("\nGreedy:")
+        #For greedy, all applications send minimum amount and aim for highest grossing.
+        for app in blue.get_valid_applications_list(game.boards,greedy.decide_bribe):
+            priority = greedy.eval_application(app)
+            self.assertGreaterEqual(priority, app[1].value)
+            self.assertEqual(app[2], MINIMUM_BRIBE)
+            print( repr(app)+" : "+str(greedy.eval_application(app)) )
+
+        tit_for_tat = TitForTat(board)
+        tit_for_tat.update(game)
+        tit_for_tat.gain_loss_model = {Player_Colour.GREEN:0, Player_Colour.RED:-3, Player_Colour.YELLOW:-3,Player_Colour.BLUE:0}
+        print("\nTit for Tat:")
+        priority = None
+        #For tit for tat, green > red >= yellow due to prior profit.
+        priorities = []
+        for app in blue.get_valid_applications_list(game.boards,tit_for_tat.decide_bribe):
+            priority = tit_for_tat.eval_application(app)
+            priorities.append( (app[1].owner, priority) )
+            print( repr(app)+" : "+str(tit_for_tat.eval_application(app)) )
+        for player, p in priorities:
+            if player == Player_Colour.GREEN:
+                values = [t[1] for t in priorities]
+                self.assertTrue( len([v for v in values if v>=p ])==1 )
+            if player == Player_Colour.YELLOW:
+                values = [t[1] for t in priorities]
+                self.assertTrue( len([v for v in values if v==p ])==2 )
 
 class TestPlayer(unittest.TestCase):
 

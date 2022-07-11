@@ -1,7 +1,7 @@
 from __future__ import annotations
 import copy
 from gamelog import GameLog
-from intrigue_datatypes import PLAYER_COUNT, Player_Colour, MINIMUM_BRIBE
+from intrigue_datatypes import PLAYER_COUNT, TOTAL_ROUNDS, Player_Colour, MINIMUM_BRIBE
 from player import Application, Gameboard, Player, EarningsLog, ConflictLog, PlacementLog, ApplicationLog, recursive_hash_object#, copy_application, copy_gameboard
 from piece import Piece
 from square import Square
@@ -24,7 +24,7 @@ class Game():
             self.boards.append([Square(0,self.players[-1].colour),Square(1,self.players[-1].colour),Square(2,self.players[-1].colour),Square(3,self.players[-1].colour)])
 
 
-    def get_legal_moves(self) -> list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]]:
+    def get_legal_moves(self, decide_bribe) -> list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]]:
         """Returns all possible moves the current player can make in the current state."""
         player = self.players[self.get_player_turn()]
         plays:list[tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]] = []
@@ -35,7 +35,7 @@ class Game():
         for conflict_log in conflict_logs:
             placement_logs = player.get_valid_placements(self.boards, conflict_log)
             for placement_log in placement_logs:
-                application_logs = player.get_valid_applications(self.boards)
+                application_logs = player.get_valid_applications(self.boards, decide_bribe)
                 for two_applications in application_logs:
                     application_log:ApplicationLog = list(two_applications)
                     plays.append( (earnings_log, conflict_log, placement_log, application_log) )
@@ -59,12 +59,12 @@ class Game():
             
         return clean_plays
 
-    def get_random_legal_move(self) -> tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]:
+    def get_random_legal_move(self, decide_bribe) -> tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog]:
         """Generates a random legal move and returns it. Only one move is generated."""
         player = self.players[self.get_player_turn()]
         board = self.boards
         conflict_log = player.get_random_valid_resolution(self.boards)
-        return (player.collect_earnings(board), conflict_log, player.get_random_valid_placement(board,conflict_log), player.get_random_valid_application(board))
+        return (player.collect_earnings(board), conflict_log, player.get_random_valid_placement(board,conflict_log), player.get_random_valid_application(board, decide_bribe))
 
     def get_next_state(self, play:tuple[EarningsLog,ConflictLog,PlacementLog,ApplicationLog], debug=False) -> Game:
         """Applies the play to create a new state, which is returned. \n Current state is not modified."""
@@ -76,7 +76,7 @@ class Game():
 
     def get_winner(self) -> tuple[int, list[Player]]:
         "Return value of the winning player, or -1 if it's not ended."
-        if self.turn_counter < 20:
+        if self.turn_counter < TOTAL_ROUNDS:
             return -1, []
         ordered_players = self.get_ordered_players()
         winners = [p for p in ordered_players if p.money == ordered_players[0]]
@@ -125,6 +125,8 @@ class Game():
             recipient = self.players[app_square.owner.value]
             recipient.palace_applicants.append( copy.deepcopy( (app_piece, app_square, app_bribe) ) )
             #Remove pieces from player sending application.
+            # print(player.pieces)
+            # print(app_piece)
             player.pieces.remove(app_piece)
 
         self.turn_counter += 1

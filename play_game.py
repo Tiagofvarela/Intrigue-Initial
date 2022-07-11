@@ -1,4 +1,5 @@
 from __future__ import division
+import copy
 import datetime
 from io import TextIOWrapper
 import sys
@@ -6,7 +7,12 @@ import time
 from board import Board, GameMove
 from game import Game
 from intrigueAI import IntrigueAI
+from intrigueAI_greedy import Greedy
+from intrigueAI_random import RandomAI
+from intrigueAI_honest import Honest
 from intrigueAI_human import Human
+from intrigueAI_titForTat import TitForTat
+from intrigueAI_traitor import Traitor
 from intrigue_datatypes import CHOSEN_MOVE_STRING, PLAYER_COUNT, Player_Colour
 from intrigueAI_monteCarlo import MonteCarlo
 from player import EarningsLog
@@ -92,7 +98,7 @@ def run():
     #Set up game board.
     board = Board()
     #Parameters
-    default_montecarlo_args = {'time':15,'max_moves':120,'C':1.4}
+    default_montecarlo_args = {'time':60,'min_moves':1,'C':1.4}
     number_of_games = 1
     
     #Generate intrigue agents.
@@ -100,14 +106,14 @@ def run():
     argument_counter = 1
     try:
         for arg in sys.argv[1:]:
-            print(arg)
+            # print(arg)
             #Number of games
             if argument_counter == 1 and str.isdigit(arg):
                 number_of_games = max(int(arg),1)
             elif arg[0] == '-':   #Optional argument.
                 optional_arg = arg[1:]
                 #Montecarlo thinking time
-                if str.isdigit(arg):
+                if str.isdigit(optional_arg):
                     if isinstance(agent_AIs[-1], MonteCarlo):
                         agent_AIs[-1].calculation_time = datetime.timedelta(seconds=int(optional_arg))
                     else:
@@ -123,13 +129,33 @@ def run():
                     if isinstance(agent_AIs[-1], MonteCarlo):
                         agent_AIs[-1].set_eval_function(optional_arg)
                     else:
-                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive the argument -g.")    
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive the argument -g.")                       
+                #Minimum amount of sims per move.
+                elif optional_arg[0] == 'm':
+                    if isinstance(agent_AIs[-1], MonteCarlo):
+                        agent_AIs[-1].min_moves = int(optional_arg[1:])
+                    else:
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive the argument -m[number].")                 
+                #Filter by target square income.
+                elif optional_arg == 't':
+                    if isinstance(agent_AIs[-1], MonteCarlo):
+                        agent_AIs[-1].set_filter_function(optional_arg)
+                    else:
+                        raise Exception(str(agent_AIs[-1])+": This agent type does not receive the argument -m[number].") 
             elif arg == "montecarlo":
                 agent_AIs.append(MonteCarlo(board, **default_montecarlo_args))
             elif arg == "random":                
-                agent_AIs.append(IntrigueAI(board))
+                agent_AIs.append(RandomAI(board))
             elif arg == "human":
                 agent_AIs.append(Human(board))
+            elif arg == "honest":
+                agent_AIs.append(Honest(board))
+            elif arg == "greedy":
+                agent_AIs.append(Greedy(board))
+            elif arg == "traitor":
+                agent_AIs.append(Traitor(board))
+            elif arg == "titfortat":
+                agent_AIs.append(TitForTat(board))
             else:
                 raise AttributeError()
             argument_counter += 1 
@@ -152,6 +178,7 @@ def run():
 
     game_counter = 0
     wins_tally:list[int] = [0,0,0,0]
+    ties_tally:list[int] = [0,0,0,0]
     #platform-log
     try:
         platform_log = open(PLATFORM_LOG_PATH,'a')
@@ -180,7 +207,14 @@ def run():
         gamelog.write("\n")
         gamelog.write("Round 1: "+str(Player_Colour(0).clean_name())+" turn\n")
 
+        saved_states = []
+
         while board.winner(current_player.states)[0] == -1:
+
+            #TEMP   -   If red player, save state.
+            # if current_player == agent_AIs[game_counter-1]:
+            #     saved_states.append(current_player.states.copy())
+
             chosen_move = current_player.get_play()
             #Register move
             gamelog.write(CHOSEN_MOVE_STRING)
@@ -202,10 +236,11 @@ def run():
             
         winner_int, winners = board.winner(current_player.states)
         if winner_int >= PLAYER_COUNT:
-            print("The game was a tie:"+repr(winners))
-            gamelog.write("The game was a tie:"+str(winners))
+            print("The game was a tie: "+repr(winners))
+            gamelog.write("The game was a tie: "+str(winners))
             for winner in winners:
-                wins_tally[winner.colour.value] += 1
+                # wins_tally[winner.colour.value] += 1
+                ties_tally[winner.colour.value] += 1
         else:
             print("Winner:",Player_Colour(winner_int).name)
             gamelog.write("Winner: "+str(Player_Colour(winner_int).clean_name()))
@@ -213,14 +248,33 @@ def run():
         toc = time.perf_counter()
         taken_minutes = (toc - tic)/60
         print("It has taken",taken_minutes,"minutes.")
-        gamelog.write("It has taken "+str(taken_minutes)+" minutes.")
+        gamelog.write("It has taken "+str(taken_minutes)+" minutes.\n")
         # print(montecarlo.plays)
         gamelog.close()
 
+        #TEMP: Find UCT move given one hour for each move.
+        # static_agent = copy.deepcopy(agent_AIs[game_counter-1])
+        # if isinstance(static_agent, MonteCarlo):
+        #     static_agent.filename = "static_state"+str(game_counter-1)+".txt"
+        #     open(static_agent.filename, 'w').close()  
+        #     static_agent.calculation_time = datetime.timedelta(seconds=60*60)
+        #     static_agent.min_moves = 0
+        #     static_agent.plays = {}
+        #     static_agent.wins = {}
+        # for state_history in saved_states:
+        #     static_agent.states = state_history
+        #     static_agent.get_play()
+
+        # #Swap Montecarlo to next position
+        # if game_counter < number_of_games:
+        #     agent_AIs[game_counter-1], agent_AIs[game_counter] = agent_AIs[game_counter], agent_AIs[game_counter-1]
+
     platform_log = open(PLATFORM_LOG_PATH,'a')
+    total_wins = sum(wins_tally)
     for i in range(len(wins_tally)):
-        print(Player_Colour(i).name+" won "+str(wins_tally[i])+" times.")
-        platform_log.write(Player_Colour(i).clean_name()+" won "+str(wins_tally[i])+" times.\n")
+        win_rate = wins_tally[i]/total_wins*100
+        print(Player_Colour(i).name+" won "+str(wins_tally[i])+" times. Tied "+str(ties_tally[i])+" times. Win rate: "+str(win_rate)+"%")
+        platform_log.write(Player_Colour(i).clean_name()+" won "+str(wins_tally[i])+" times. Tied "+str(ties_tally[i])+" times. Win rate: "+str(win_rate)+"%\n")
     platform_log.write("--------------------------------------------\n\n")
     platform_log.close()
 

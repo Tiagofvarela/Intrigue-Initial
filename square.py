@@ -1,10 +1,11 @@
 from __future__ import annotations
 from piece import Piece
 
-INDEX_VALUE_DICT = {0:1, 1:6, 2: 10, 3:3}
-VALUE_INDEX_DICT = {1:0, 6:1, 10:2, 3:3}
-
 class Square:
+
+    INDEX_VALUE_DICT = {0:1, 1:6, 2: 10, 3:3}
+    VALUE_INDEX_DICT = {1:0, 6:1, 10:2, 3:3}
+
     """Represents a square in a player board, having an inherent value and a piece."""
     value:int
     piece:Piece|None
@@ -12,7 +13,7 @@ class Square:
 
     def __init__(self, index:int, owner_colour:player.Player_Colour):
         """Creates a square of a given index (of the four available)."""         
-        self.value = INDEX_VALUE_DICT[index]
+        self.value = self.INDEX_VALUE_DICT[index]
         self.piece = None
         self.owner = owner_colour
 
@@ -28,7 +29,7 @@ class Square:
     #     return square
 
     def get_index(self) -> tuple[int,int]:
-        return self.owner.value,VALUE_INDEX_DICT[self.value]
+        return self.owner.value,self.VALUE_INDEX_DICT[self.value]
     
     def __eq__(self, other: object) -> bool:
         """Checks the square value, owner, and piece."""

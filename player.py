@@ -61,7 +61,7 @@ class Player():
 
     ###Random Implementation###
 
-    def play_piece(self, board:Gameboard, players:list[Player]) -> tuple[Application,Player]:
+    def play_piece(self, board:Gameboard, players:list[Player], decide_bribe) -> tuple[Application,Player]:
         """Chooses a piece to send and a player to send it to. Returns Application and Player to send it to. Piece is removed from hand.
         \nRegisters which square and piece they have sent sent."""  
         #Choose random player and square.
@@ -75,7 +75,7 @@ class Player():
         player = players[player_i]
         square_to_send_to = board[player_i][square_i]
 
-        application = (piece_to_play, square_to_send_to, self.decide_bribe(piece_to_play,square_to_send_to))
+        application = (piece_to_play, square_to_send_to, decide_bribe(piece_to_play,square_to_send_to))
         return application,player
    
     def select_square_to_place(self, board:Gameboard, players:list[Player], application:Application, bribes:list[Application]) -> Square:
@@ -98,14 +98,6 @@ class Player():
         """Given the conflicting square and piece, chooses a piece to keep and returns it."""
         #Randomly choose to replace or not.
         return choice(bribes)
-
-    def decide_bribe(self, piece:Piece, square:Square) -> int:
-        """Decide bribe to give to player so they accept the application. 
-        \nAmount is subtracted from account."""
-        #Bribe is set to random value between min and a fourth of total.
-        bribe = randint(MINIMUM_BRIBE, max(round(self.money/4),MINIMUM_BRIBE) )
-        #self.money -= bribe
-        return 1#bribe
     ###################
 
     # def resolve_applications(self, board:Gameboard, players:list[Player]) -> tuple[list[tuple[list[Application], Application]], list[tuple[Application, int, Square]]]:
@@ -208,21 +200,10 @@ class Player():
     #                 most_valuable_squares.append(square)
     #     return most_valuable_squares  
 
-    def get_valid_applications(self, board:Gameboard) -> list[tuple[Application, Application]]:
-        """Returns all the logically valid squares a player can send a piece to, 
-        and the pieces that can be sent for each square."""
-        valid_applications:ApplicationLog = []
-        for i in range(len(board)):
-            if Player_Colour(i) == self.colour:
-                continue
-            for j in range(len(board[i])):
-                square = board[i][j]
-                valid_pieces = self.get_valid_pieces_for_square(board,i,j)
-
-                #For each piece, create entry of it as a possible move.
-                for piece in valid_pieces:
-                    application = (piece, square, self.decide_bribe(piece,square))
-                    valid_applications.append( application )
+    def get_valid_applications(self, board:Gameboard, decide_bribe=lambda a,b : 1) -> list[tuple[Application, Application]]:
+        """Returns all the logically valid squares a player can send a piece to, and the pieces that 
+        can be sent for each square. Combines them into a list of ApplicationLog with two apps each."""
+        valid_applications = self.get_valid_applications_list(board, decide_bribe)
 
         #Get every possible combination of two pieces to be sent. [(Application1,Application2), ..., ]
         #Note: (Application1,Application2) == (Application2,Application1), and therefore only one of these is counted.
@@ -240,9 +221,25 @@ class Player():
                 j += 1
         return list(combs)
 
-    def get_random_valid_application(self, board:Gameboard) -> ApplicationLog:
+    def get_valid_applications_list(self, board:Gameboard, decide_bribe):
+        """Returns a list of all valid aplications for this board."""
+        valid_applications:ApplicationLog = []
+        for i in range(len(board)):
+            if Player_Colour(i) == self.colour:
+                continue
+            for j in range(len(board[i])):
+                square = board[i][j]
+                valid_pieces = self.get_valid_pieces_for_square(board,i,j)
+
+                #For each piece, create entry of it as a possible move.
+                for piece in valid_pieces:
+                    application = (piece, square, decide_bribe(piece,square))
+                    valid_applications.append( application )
+        return valid_applications
+
+    def get_random_valid_application(self, board:Gameboard, decide_bribe=lambda a,b:1) -> ApplicationLog:
         """Randomly returns one valid ApplicationLog for current state."""
-        #TODO: Investigate performance of maintaining a static list of possible application target and picking one randomly.
+        #TODO: Pass bribe decision function as argument.
         applications:list[Application] = []
         valid_board_indexes = [i for i in list(range(0,len(board))) if i != self.colour.value]
         my_pieces = self.pieces.copy()
@@ -267,7 +264,7 @@ class Player():
                 continue
             chosen_piece = random.choice(my_valid_pieces)
             my_pieces.remove(chosen_piece)
-            applications.append( (chosen_piece, square, self.decide_bribe(chosen_piece,square)) )
+            applications.append( (chosen_piece, square, decide_bribe(chosen_piece,square)) )
             if len(applications) > 1:
                 break
             repeat_i = i
@@ -312,6 +309,7 @@ class Player():
         return resolution 
     
     def get_conflicts(self, board:Gameboard) -> list[list[Application]]:
+        """Returns all conflicts for this player."""
         conflicts:list[list[Application]] = []
         #Check conflicts. 
         for piece_type_int in range(100,104):
@@ -406,14 +404,16 @@ class Player():
 
         return valid_external_resolutions
 
-    def get_valid_pieces_for_square(self, board:Gameboard, i:int, j:int) -> list[Piece]:
+    def get_valid_pieces_for_square(self, board:Gameboard, i:int, j:int, piece_list=None) -> list[Piece]:
         """Returns all pieces that can be sent to the given square."""
+        if not piece_list:
+            piece_list = self.pieces
         valid_pieces:list[Piece] = []
         square = board[i][j]
         if square.piece:    #Occupied: Send of the same type.
-            valid_pieces = [piece for piece in self.pieces if (piece.type == square.piece.type and piece.owner != square.piece.owner)]
+            valid_pieces = [piece for piece in piece_list if (piece.type == square.piece.type and piece.owner != square.piece.owner)]
         else:   #Empty: Find occupied types, filter self pieces.
-            valid_pieces = [piece for piece in self.pieces if piece.type not in self.get_row_types(board[i])]
+            valid_pieces = [piece for piece in piece_list if piece.type not in self.get_row_types(board[i])]
         
         #remove duplicates 
         return list(set(valid_pieces)) 

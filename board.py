@@ -6,7 +6,7 @@
 import sys
 
 from game import Game
-from player import ApplicationLog, ConflictLog, PlacementLog, EarningsLog, Player
+from player import ApplicationLog, ConflictLog, PlacementLog, EarningsLog
 
 GameMove = tuple[EarningsLog, ConflictLog, PlacementLog, ApplicationLog]
 
@@ -27,16 +27,16 @@ class Board(object):
         Returns the new game state."""
         return state.get_next_state(play)
 
-    def legal_plays(self, state_history:list[Game]) -> list[GameMove]:
+    def legal_plays(self, state_history:list[Game], decide_bribe) -> list[GameMove]:
         """Takes a sequence of game states representing the full game history, 
         and returns the full list of moves that are legal plays for the current player."""
-        plays = state_history[-1].get_legal_moves()
+        plays = state_history[-1].get_legal_moves(decide_bribe)
         return plays
 
-    def get_random_legal_play(self, state_history:list[Game]) -> GameMove:
+    def get_random_legal_play(self, state_history:list[Game], decide_bribe) -> GameMove:
         """Takes a sequence of game states representing the full game history, 
         and returns a random legal play for the current player."""
-        play = state_history[-1].get_random_legal_move()
+        play = state_history[-1].get_random_legal_move(decide_bribe)
         return play
 
     def winner(self, state_history:list[Game]):

@@ -116,7 +116,8 @@ class Human(IntrigueAI):
             bribe = self.decide_bribe(piece_to_play, square_to_send_to, my_player.money-1)
         return (piece_to_play, square_to_send_to, bribe)
 
-    def decide_bribe(self, piece:Piece, square:Square, max_spendable:int) -> int:
+    def decide_bribe(self, piece:Piece, square:Square, max_spendable:int= None) -> int:
+        assert max_spendable
         print("Application: "+str(piece)+square.__colour_repr__())
         #print("Applicant bribes (-1 are unknown): "+str(previous_bribes))
         print("Select bribe amount (value will be adjusted to the nearest limit). Min",MINIMUM_BRIBE,"Max",max_spendable)
